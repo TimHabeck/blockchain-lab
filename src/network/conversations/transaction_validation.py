@@ -13,16 +13,14 @@ class Transaction_Validation():
     def send_prepare_to_validate(self):
         for peer in self.node.all_nodes:
             self.votes[peer.port] = "not_voted"
-            
+
         msg = Prepare_to_validate(self.transaction)
-        self.node.send_to_nodes(msg.to_dict()) 
+        self.node.send_to_nodes(msg.to_dict())
 
     # participants
     def prepare_to_validate_received(self, sender_node_conn):
-        transaction = self.transaction
-        # validate transaction 
         valid = True
-        
+
         # simulate that node 81 can't validate the transaction
         if self.node.port == 81:
             valid = False
@@ -35,17 +33,17 @@ class Transaction_Validation():
             print("vote transaction not valid")
 
         self.node.send_to_node(sender_node_conn, msg_out.to_dict())
-    
+
     # coordinator
     def vote_received(self, sender_node_conn, message):
         msg_in = Vote.from_dict(message)
 
         self.votes[sender_node_conn.port] = msg_in.get_valid()
-        
+
         # if all peers have voted
         all_peers_voted = "not_voted" not in self.votes.values()
+        # if len(self.votes) == len(self.node.all_nodes):
         if all_peers_voted:
-        #if len(self.votes) == len(self.node.all_nodes):
             if all(self.votes.values()):
                 # add transaction to mempool
                 msg_out = Global_decision(True)
@@ -58,7 +56,6 @@ class Transaction_Validation():
             self.votes.clear()
             self.node.conversations.pop("transaction_validation")
 
-    
     # participants
     def global_decision_received(self, message):
         msg = Global_decision.from_dict(message)
@@ -68,5 +65,5 @@ class Transaction_Validation():
             print("transaction validated and added to mempool")
         else:
             print("transaction not valid")
-        
+
         self.node.conversations.pop("transaction_validation")

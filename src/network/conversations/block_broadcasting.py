@@ -1,11 +1,10 @@
 from .block_download import Block_download
-from ..bo.messages.get_blocks import Get_blocks
 from ..bo.messages.block_message import Block_message
+from src.db.mapper import Mapper
+from src.blockchain.block import Block
 import os
 import sys
 sys.path.append("..")
-from src.db.mapper import Mapper
-from src.blockchain.block import Block
 
 
 class Block_broadcasting():

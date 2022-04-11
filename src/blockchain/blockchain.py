@@ -47,7 +47,6 @@ class Blockchain():
         Mapper().write_latest_block_hash(block_hash)
         print("block saved")
 
-
     def create_genesis_block(self):
         block = Block()
         block = block.serialize()

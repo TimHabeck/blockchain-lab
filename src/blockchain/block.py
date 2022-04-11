@@ -41,7 +41,7 @@ class Transaction(Serializable):
             "amount": self.amount,
             "timestamp": self.timestamp.strftime("%m/%d/%Y, %H:%M:%S")
         }
-        
+
     def hash(self):
         return hashlib.sha256(self.serialize()).hexdigest()
 

@@ -1,5 +1,6 @@
 from .message import Message
 
+
 class Global_decision(Message):
     def __init__(self, valid) -> None:
         super().__init__()
@@ -21,4 +22,3 @@ class Global_decision(Message):
     @staticmethod
     def from_dict(dict):
         return Global_decision(dict["valid"])
-       

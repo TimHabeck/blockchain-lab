@@ -1,17 +1,18 @@
 from .message import Message
 from network.bo.peer import Peer
 
+
 class Addr(Message):
     def __init__(self, peers) -> None:
         super().__init__()
         self._name = "addr"
         self._peers = peers
-       
+
     def get_peers(self):
         return self._peers
 
     def set_peers(self, peers):
-        self._peers = peers 
+        self._peers = peers
 
     def to_dict(self):
         peers = []

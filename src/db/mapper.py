@@ -1,6 +1,7 @@
 import json
 import os
 
+
 class Mapper():
     blockchain_dir = os.path.dirname(
         os.path.realpath(__file__)) + "/blocks"

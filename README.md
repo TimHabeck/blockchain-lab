@@ -17,11 +17,9 @@ enthalten.
 
 ## Folgende Funktionen sind prototypisch umgesetzt:
 - Automatisches Peer-Discovery: Beim Start verbindet sich ein Node automatisch mit dem Rest des Netzwerkes
-- Verteilte Validierung von Transaktionen, durch ein Protokoll angelehnt an das  
-2-Phase-Commit-Protokoll
+- Verteilte Validierung von Transaktionen, durch ein Protokoll angelehnt an das 2-Phase-Commit-Protokoll
 - Transaktionen können über die Command-Line erstellt werden und werden an das ganze Netzwek gesendet und 
 in der Blockchain aller Nodes gespecihert, wenn valide
 - Invalide Transaktionen werden nicht von den Nodes gespeichert
-- Teile der Blockchain oder die ganze Blockchain von anderen Nodes können heruntergeladen werden, durch eine 
-vereinfachte Version des Initial Block Downloads von Bitcoin
+- Teile der Blockchain oder die ganze Blockchain von anderen Nodes können heruntergeladen werden, durch eine vereinfachte Version des Initial Block Downloads von Bitcoin
 - Resynchronisation der Nodes nach einem Fork in bestimmten Situationen

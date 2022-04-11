@@ -1,7 +1,7 @@
 from .message import Message
+from src.blockchain.block import Block
 import sys
 sys.path.append("..")
-from src.blockchain.block import Block
 
 
 class Block_message(Message):

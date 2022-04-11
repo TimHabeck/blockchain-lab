@@ -43,5 +43,3 @@ class Blocks(Message):
             blocks.append(Block.from_dict(block, block["hash"]))
         block_message.set_blocks(blocks)
         return block_message
-
-       

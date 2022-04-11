@@ -1,11 +1,10 @@
 import sys
 import os
 from Crypto.PublicKey import RSA
-from Crypto.Signature import *
 from network.node import P2PNode
 from network.conversations.transaction_validation import Transaction_Validation
 from network.conversations.block_download import Block_download
-from src.blockchain.block import Transaction, Block
+from src.blockchain.block import Transaction
 from src.blockchain.blockchain import Blockchain
 
 
@@ -45,7 +44,7 @@ if __name__ == "__main__":
 
             elif user_input == 'v':
                 # validate transaction first... if valid:
-                transaction = {'hash':'test'}
+                transaction = {'hash': 'test'}
 
                 validation = Transaction_Validation(node, transaction)
                 node.conversations["transaction_validation"] = validation

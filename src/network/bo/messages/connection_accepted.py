@@ -12,6 +12,5 @@ class Connection_accepted(Message):
         }
 
     @staticmethod
-    def from_dict(dict):
+    def from_dict():
         return Connection_accepted()
-       

@@ -26,7 +26,7 @@ class P2PNode(Node):
     def inbound_node_connected(self, node):
         print("inbound_node_connected: (" + self.id + "): " + node.id)
 
-        # When the maximum connections is reached, it sends host and port of his peers and disconnects the connection 
+        # When the maximum connections is reached, it sends host and port of his peers and disconnects the connection
         peer_discovery = Initial_Peer_Discovery(self)
         if len(self.nodes_inbound) > self.max_connections:
             peer_discovery.send_addr(node)
@@ -42,11 +42,11 @@ class P2PNode(Node):
         self.print_conns()
 
     def node_message(self, sender_node_conn, message):
-        print("node_message (" + self.id + ") from " + sender_node_conn.id + ": " + message['name'] +" with payload: "+ str(message))
+        print("node_message (" + self.id + ") from " + sender_node_conn.id + ": " + message['name'] + " with payload: " + str(message))
 
         if message['name'] == 'addr':
             # addr is received from nodes that want to disconnect, the payload contains addresses from potential peers
-            peer_discovery = Initial_Peer_Discovery(self)           
+            peer_discovery = Initial_Peer_Discovery(self)
             peer_discovery.addr_received(sender_node_conn, message)
 
         if message['name'] == 'connection-accepted':
@@ -71,19 +71,18 @@ class P2PNode(Node):
             validation = Transaction_Validation(self, msg_in.get_transaction())
             self.conversations["transaction_validation"] = validation
             validation.prepare_to_validate_received(sender_node_conn)
-        
+
         if message['name'] == 'vote':
             validation = self.conversations["transaction_validation"]
             validation.vote_received(sender_node_conn, message)
 
-        if message['name'] == 'global-decision': 
+        if message['name'] == 'global-decision':
             validation = self.conversations["transaction_validation"]
             validation.global_decision_received(message)
 
-
     def node_disconnect_with_outbound_node(self, node):
         print("node wants to disconnect with oher outbound node: (" + self.id + "): " + node.id)
-        
+
     def node_request_to_stop(self):
         print("node is requested to stop (" + self.id + "): ")
 
@@ -97,7 +96,7 @@ class P2PNode(Node):
         print("---")
 
     def connect_with_node(self, host, port, reconnect=False):
-        """ Make a connection with another node that is running on host with port. When the connection is made, 
+        """ Make a connection with another node that is running on host with port. When the connection is made,
             an event is triggered outbound_node_connected. When the connection is made with the node, it exchanges
             the id's of the node. First we send our id and then we receive the id of the node we are connected to.
             When the connection is made the method outbound_node_connected is invoked. If reconnect is True, the
@@ -122,7 +121,7 @@ class P2PNode(Node):
             data = {'id': self.id, 'port': self.port}
             msg = json.dumps(data)
             sock.send(msg.encode('utf-8'))  # Send my id and port to the connected node
-            connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
+            connected_node_id = sock.recv(4096).decode('utf-8')  # When a node is connected, it sends it id!
 
             # Fix bug: Cannot connect with nodes that are already connected with us!
             for node in self.nodes_inbound:
@@ -157,7 +156,7 @@ class P2PNode(Node):
                 connection, client_address = self.sock.accept()
 
                 self.debug_print("Total inbound connections:" + str(len(self.nodes_inbound)))
-                
+
                 # Basic information exchange (not secure) of the id's of the nodes!
                 data = connection.recv(4096).decode('utf-8')
                 connected_node = json.loads(data)  # When a node is connected, it sends its id and port
@@ -168,7 +167,7 @@ class P2PNode(Node):
 
                 self.nodes_inbound.append(thread_client)
                 self.inbound_node_connected(thread_client)
-            
+
             except socket.timeout:
                 self.debug_print('Node: Connection timeout!')
 
@@ -194,13 +193,12 @@ class P2PNode(Node):
         for t in self.nodes_outbound:
             t.join()
 
-        self.sock.settimeout(None)   
+        self.sock.settimeout(None)
         self.sock.close()
         print("Node stopped")
 
-
     def start_up(self):
-    
+
         self.start()
         if self.port != self.genesis_port:
             self.connect_with_node('127.0.0.1', self.genesis_port)

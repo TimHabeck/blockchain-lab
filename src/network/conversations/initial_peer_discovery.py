@@ -14,10 +14,9 @@ class Initial_Peer_Discovery():
             if conn.port != node_connection.port:
                 peer = Peer(conn.host, conn.port)
                 peers.append(peer)
-        
+
         msg = Addr(peers)
         self.node.send_to_node(node_connection, msg.to_dict())
-        
         node_connection.stop()   # stop connection
 
     # node that searches peer

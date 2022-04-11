@@ -4,8 +4,8 @@
 Installieren Sie alle Dependencies in der requirements.txt Datei.
 
 ## Nodes starten
-Um einen Node zu starten führen sie ```python main.py 80``` im
-```/src``` Verzeichnis aus. ```80``` ist der Port auf dem der Node ausgeführt
+Um einen Node zu starten führen sie `python main.py 80` im
+`/src` Verzeichnis aus. `80` ist der Port auf dem der Node ausgeführt
 werden soll. Der erste Node den Sie starten muss immer auf dem Port 80 laufen, die Ports 
 aller weiteren Nodes können Sie frei wählen.
 

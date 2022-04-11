@@ -1,5 +1,6 @@
 from abc import ABC
 
+
 class Message(ABC):
     def __init__(self) -> None:
         self._name = None
@@ -14,5 +15,5 @@ class Message(ABC):
         pass
 
     @staticmethod
-    def from_dict(dict):
+    def from_dict():
         pass

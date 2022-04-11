@@ -1,5 +1,6 @@
 from .message import Message
 
+
 class Vote(Message):
     def __init__(self, valid) -> None:
         super().__init__()
@@ -21,4 +22,3 @@ class Vote(Message):
     @staticmethod
     def from_dict(dict):
         return Vote(dict["valid"])
-       

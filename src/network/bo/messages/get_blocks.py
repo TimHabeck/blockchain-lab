@@ -22,4 +22,3 @@ class Get_blocks(Message):
     @staticmethod
     def from_dict(dict):
         return Get_blocks(dict["latest_block_hash"])
-       

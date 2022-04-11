@@ -15,7 +15,7 @@ blockchain2.add_block(transactions2)
 time.sleep(1)
 
 transactions3 = [Transaction("Jan", "Timme", 10.0),
-                Transaction("Timme", "Jan", 50.0)]
+                 Transaction("Timme", "Jan", 50.0)]
 blockchain3 = Blockchain()
 blockchain3.add_block(transactions3)
 

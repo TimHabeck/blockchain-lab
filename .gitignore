@@ -1,5 +1,5 @@
-*__pycache__
-*private_key.pem
-*public_key.pem
-*blocks/
-*.idea
+__pycache__
+private_key.pem
+public_key.pem
+blocks/
+.idea

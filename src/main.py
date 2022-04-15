@@ -36,11 +36,10 @@ if __name__ == "__main__":
 
             print(public_key.decode('ASCII'))
 
-        possible_inputs = ['s', 'v', 'd', 't']
+        possible_inputs = ['s', 'v', 't']
         user_input = ''
         while user_input not in possible_inputs:
             user_input = input("type 's' to stop the node \n type 'v' to validate a transaction \n "
-                               "type 'd' to download new blocks from a peer \n "
                                "type 't' to create transactions, create a block and broadcast it to the network \n")
 
             if user_input == 's':
@@ -53,19 +52,6 @@ if __name__ == "__main__":
                 validation = Transaction_Validation(node, transaction)
                 node.conversations["transaction_validation"] = validation
                 validation.send_prepare_to_validate()
-
-                user_input = ''
-
-            elif user_input == 'd':
-                block_download = Block_download(node)
-                if len(node.nodes_outbound) != 0:
-                    peer = node.nodes_outbound[0]
-                    block_download.get_blocks(peer)
-                elif len(node.all_nodes) != 0:
-                    peer = node.all_nodes[0]
-                    block_download.get_blocks(peer)
-                else:
-                    print("no peers")
 
                 user_input = ''
 

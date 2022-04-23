@@ -3,3 +3,4 @@ private_key.pem
 public_key.pem
 blocks/
 .idea
+src/db/latest_block_hash

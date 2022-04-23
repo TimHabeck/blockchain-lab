@@ -1,8 +1,9 @@
-from datetime import datetime
 import hashlib
 import json
-from abc import ABC, abstractmethod
+import logging
 import os
+from abc import ABC, abstractmethod
+from datetime import datetime
 from src.blockchain.merkle_tree import MerkleTree
 from src.db.mapper import Mapper
 import logging
@@ -24,6 +25,12 @@ class Transaction(Serializable):
         self.target = target
         self.amount = amount
         self.timestamp = timestamp
+
+    def set_pubkey(self, pubkey):
+        self.pubkey = pubkey
+
+    def set_signature(self, sig):
+        self.sig = sig
 
     @staticmethod
     def from_dict(transaction_dict):
@@ -64,17 +71,31 @@ class Transaction(Serializable):
                     if transaction.target == self.source:
                         balance += transaction.amount
             except AttributeError:
-                print("no transaction")
+                logging.error("no transaction")
         return balance
 
     def validate(self):
+        # verify the transaction data structure
+        # we just assume if the keys are present, the values are also valid
+        expected_keys = set(["amount", "source", "target", "timestamp"])
+        if set(self.to_dict()) != expected_keys:
+            logging.error("Transaction key fields invalid")
+            return False
+
         balance = self.get_balance()
         if balance < self.amount:
-            print("Not valid: " + str(self.source) + " can't send " +
-                  str(self.amount) + " with a balance of " + str(balance))
+            logging.error(f"Not valid: {self.source} can't send {self.amount} "
+                  f"with balance of {balance}")
             return False
-        else:
-            return True
+
+        # verify the transaction signature
+        tx_hash = self.hash()
+        if not self.pubkey.verify(self.sig, tx_hash.encode("utf-8")):
+            logging.error("Cannot verify transaction signature")
+            return False
+
+        logging.debug("Transaction is valid")
+        return True
 
 
 class Block(Serializable):
@@ -152,7 +173,7 @@ class Block(Serializable):
                 return False
 
         if self.saved_hash != self.hash():
-            print("Not valid: recalculating the hash results in a different hash")
+            logging.error("Not valid: recalculating the hash results in a different hash")
             return False
         else:
             return True

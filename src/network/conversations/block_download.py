@@ -32,9 +32,10 @@ class Block_download():
             self.node.send_to_node(node_connection, msg.to_dict())
         elif latest_block_hash_from_peer != own_latest_block_hash:
             if latest_block_hash_from_peer not in my_block_hashes:
-                # local blockchain doesn't contain latest_block_hash_from_peer -> possible fork
+                # local blockchain doesn't contain latest_block_hash_from_peer
+                # -> possible fork
                 print("the local blockchain doesn't contain the latest_block_hash from peer")
-                blocks = []
+                blocks = self.build_whole_blockchain()
                 info = "fork-detected"
                 msg = Blocks(blocks, info)
                 self.node.send_to_node(node_connection, msg.to_dict())
@@ -54,8 +55,19 @@ class Block_download():
             print("Already synced with peer")
             return
         if msg_in.get_info() == "fork-detected":
-            print("the predecessor of the received block doesn't match the local latest block")
-            return
+            print("the predecessor of the received block doesn't match "
+                  "the local latest block")
+            # if the chain from the peer is longer than the local chain,
+            # rebuild the whole thing
+            if len(msg_in.get_blocks()) > len(my_block_hashes):
+                print("Less local blocks, adopting longest chain")
+                db_dir = os.getcwd() + "/db/blocks/"
+                for block in os.listdir(db_dir):
+                    os.remove(os.path.join(db_dir, block))
+                my_block_hashes = ''
+                local_latest_block_hash = ''
+            else:
+                return
 
         for block in msg_in.get_blocks():
             if block.validate() is False:
@@ -66,7 +78,9 @@ class Block_download():
                 return
             if block.predecessor == local_latest_block_hash:
                 successor_of_local_latest_block_count += 1
-        if successor_of_local_latest_block_count != 1:
+
+        if successor_of_local_latest_block_count != 1 \
+                and msg_in.get_info() != "fork-detected":
             print("Not exactly one successor of the local latest block")
             return
 
@@ -93,4 +107,12 @@ class Block_download():
             return blocks_to_send
 
         blocks_to_send = self.build_blockchain_from_hash(successor_block.saved_hash, blocks_to_send)
+        return blocks_to_send
+
+    def build_whole_blockchain(self):
+        blocks_to_send = []
+        for block_hash in os.listdir(os.getcwd() + "/db/blocks/"):
+            block_dict = Mapper().read_block(block_hash)
+            block: Block = Block().from_dict(block_dict, block_hash)
+            blocks_to_send.append(block)
         return blocks_to_send

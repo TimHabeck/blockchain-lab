@@ -1,9 +1,11 @@
 import sys
 import os
+import logging
 from Crypto.PublicKey import RSA
 from network.node import P2PNode
 from network.conversations.transaction_validation import Transaction_Validation
-from network.conversations.block_download import Block_download
+from ecdsa import SigningKey, SECP256k1
+from hashlib import sha256
 from src.blockchain.block import Transaction
 from src.blockchain.blockchain import Blockchain
 import logging
@@ -11,7 +13,7 @@ import logging
 
 if __name__ == "__main__":
 
-    logging.basicConfig(format="%(asctime)s %(levelname)-8s[%(lineno)s: %(funcName)s] %(message)s",
+    logging.basicConfig(format="%(asctime)s %(levelname)-8s[%(filename)s %(funcName)s(): %(lineno)s] %(message)s",
                         level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
     # start node
@@ -36,11 +38,10 @@ if __name__ == "__main__":
 
             print(public_key.decode('ASCII'))
 
-        possible_inputs = ['s', 'v', 'd', 't']
+        possible_inputs = ['s', 'v', 't']
         user_input = ''
         while user_input not in possible_inputs:
             user_input = input("type 's' to stop the node \n type 'v' to validate a transaction \n "
-                               "type 'd' to download new blocks from a peer \n "
                                "type 't' to create transactions, create a block and broadcast it to the network \n")
 
             if user_input == 's':
@@ -56,19 +57,6 @@ if __name__ == "__main__":
 
                 user_input = ''
 
-            elif user_input == 'd':
-                block_download = Block_download(node)
-                if len(node.nodes_outbound) != 0:
-                    peer = node.nodes_outbound[0]
-                    block_download.get_blocks(peer)
-                elif len(node.all_nodes) != 0:
-                    peer = node.all_nodes[0]
-                    block_download.get_blocks(peer)
-                else:
-                    print("no peers")
-
-                user_input = ''
-
             elif user_input == 't':
                 transactions = []
                 create_transactions = True
@@ -77,10 +65,25 @@ if __name__ == "__main__":
                     source = input("type the sender: \n")
                     target = input("type the receiver: \n")
                     amount = input("type the amount: \n")
+
                     transaction = Transaction(source, target, float(amount))
-                    print(transaction)
+                    tx_hash = transaction.hash()
+                    logging.debug(f"Created transaction {transaction.to_dict()}")
+                    logging.debug(f"Hash of transaction is {tx_hash}")
+
+                    # generate an ECDSA keypair for each transaction
+                    private_key = SigningKey.generate(curve=SECP256k1, hashfunc=sha256)
+                    pubkey = private_key.get_verifying_key()
+                    # sign the transaction hash with the private key
+                    sig = private_key.sign(tx_hash.encode("utf-8"))
+
+                    # add the pubkey and the signature to the transaction
+                    transaction.set_pubkey(pubkey)
+                    transaction.set_signature(sig)
+                    logging.debug("Created ECDSA keypair and signature")
+
                     transactions.append(transaction)
-                    answer = input("do you want to create another transaction? (y/n) \n")
+                    answer = input("do you want to create another transaction? (y/n)\n")
                     if answer == 'y':
                         continue
                     else:
@@ -94,4 +97,4 @@ if __name__ == "__main__":
                 user_input = ''
 
     else:
-        print("specify the port as argument to start a node")
+        logging.error("specify the port as argument to start a node")

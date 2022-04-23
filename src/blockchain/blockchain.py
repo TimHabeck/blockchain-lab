@@ -3,6 +3,7 @@ from src.db.mapper import Mapper
 from src.network.conversations.block_broadcasting import Block_broadcasting
 import hashlib
 import os
+import logging
 
 
 class Blockchain():
@@ -12,14 +13,18 @@ class Blockchain():
         block = Block(pred=pred_hash)
         for transaction in transactions:
             block.add_transaction(transaction)
+        
+        block.nonce = block.find_nonce()
 
         block_hash = block.hash()
+        logging.debug(f"{block_hash=}")
         block.saved_hash = block_hash
         cwd = os.getcwd()
         if cwd.endswith('tests'):
             cwd = os.path.dirname(os.getcwd())   # if in directory 'tests', go one directory up
         my_block_hashes = os.listdir(cwd + "/db/blocks/")
         if block.validate() is False:
+
             print("The block is not valid")
             return
         if block_hash in my_block_hashes:

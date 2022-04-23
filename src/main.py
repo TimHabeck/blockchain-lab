@@ -6,9 +6,13 @@ from network.conversations.transaction_validation import Transaction_Validation
 from network.conversations.block_download import Block_download
 from src.blockchain.block import Transaction
 from src.blockchain.blockchain import Blockchain
+import logging
 
 
 if __name__ == "__main__":
+
+    logging.basicConfig(format="%(asctime)s %(levelname)-8s[%(lineno)s: %(funcName)s] %(message)s",
+                        level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
     # start node
     if len(sys.argv) > 1:
@@ -74,6 +78,7 @@ if __name__ == "__main__":
                     target = input("type the receiver: \n")
                     amount = input("type the amount: \n")
                     transaction = Transaction(source, target, float(amount))
+                    print(transaction)
                     transactions.append(transaction)
                     answer = input("do you want to create another transaction? (y/n) \n")
                     if answer == 'y':

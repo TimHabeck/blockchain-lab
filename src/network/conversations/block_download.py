@@ -1,10 +1,10 @@
+import os
+import sys
+sys.path.append("..")
 from ..bo.messages.get_blocks import Get_blocks
 from ..bo.messages.blocks import Blocks
 from src.db.mapper import Mapper
 from src.blockchain.block import Block
-import os
-import sys
-sys.path.append("..")
 
 
 class Block_download():

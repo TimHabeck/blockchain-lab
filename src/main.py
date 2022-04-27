@@ -8,13 +8,12 @@ from ecdsa import SigningKey, SECP256k1
 from hashlib import sha256
 from src.blockchain.block import Transaction
 from src.blockchain.blockchain import Blockchain
-import logging
 
 
 if __name__ == "__main__":
 
-    logging.basicConfig(format="%(asctime)s %(levelname)-8s[%(filename)s %(funcName)s(): %(lineno)s] %(message)s",
-                        level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(format="%(asctime)s %(levelname)-8s[%(filename)s %(funcName)s(): "
+                        "%(lineno)s] %(message)s", level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
     # start node
     if len(sys.argv) > 1:
@@ -25,7 +24,8 @@ if __name__ == "__main__":
         if not os.path.exists('db/keys'):
             os.mkdir("db/keys")
 
-        if not os.path.exists('db/keys/private_key.pem') or not os.path.exists('db/keys/public_key.pem'):
+        if not os.path.exists('db/keys/private_key.pem') \
+                or not os.path.exists('db/keys/public_key.pem'):
             # generate keys
             key = RSA.generate(2048)
             private_key = key.export_key()
@@ -41,8 +41,9 @@ if __name__ == "__main__":
         possible_inputs = ['s', 'v', 't']
         user_input = ''
         while user_input not in possible_inputs:
-            user_input = input("type 's' to stop the node \n type 'v' to validate a transaction \n "
-                               "type 't' to create transactions, create a block and broadcast it to the network \n")
+            user_input = input("type 's' to stop the node\ntype 'v' to validate a transaction \n "
+                               "type 't' to create transactions, create a block and "
+                               "broadcast it to the network \n")
 
             if user_input == 's':
                 node.stop()
@@ -95,6 +96,5 @@ if __name__ == "__main__":
                     blockchain = Blockchain()
                     blockchain.add_block(transactions, node)
                 user_input = ''
-
     else:
-        logging.error("specify the port as argument to start a node")
+        logging.error("specify the port as the first argument to start a node")

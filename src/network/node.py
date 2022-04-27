@@ -26,7 +26,7 @@ class P2PNode(Node):
     def inbound_node_connected(self, node):
         print("inbound_node_connected: (" + self.id + "): " + node.id)
 
-        # When the maximum connections is reached, it sends host and port of his peers and disconnects the connection
+        # When maximum connections is reached, send host and port of all peers and disconnect
         peer_discovery = Initial_Peer_Discovery(self)
         if len(self.nodes_inbound) > self.max_connections:
             peer_discovery.send_addr(node)
@@ -42,10 +42,11 @@ class P2PNode(Node):
         self.print_conns()
 
     def node_message(self, sender_node_conn, message):
-        print("node_message (" + self.id + ") from " + sender_node_conn.id + ": " + message['name'] + " with payload: " + str(message))
+        print(f"node_message ({self.id}) from {sender_node_conn.id}: {message['name']} "
+              f"with payload {str(message)}")
 
         if message['name'] == 'addr':
-            # addr is received from nodes that want to disconnect, the payload contains addresses from potential peers
+            # addr is received from disconnecting nodes, contains addresses from potential peers
             peer_discovery = Initial_Peer_Discovery(self)
             peer_discovery.addr_received(sender_node_conn, message)
 
@@ -96,11 +97,12 @@ class P2PNode(Node):
         print("---")
 
     def connect_with_node(self, host, port, reconnect=False):
-        """ Make a connection with another node that is running on host with port. When the connection is made,
-            an event is triggered outbound_node_connected. When the connection is made with the node, it exchanges
-            the id's of the node. First we send our id and then we receive the id of the node we are connected to.
-            When the connection is made the method outbound_node_connected is invoked. If reconnect is True, the
-            node will try to reconnect to the code whenever the node connection was closed."""
+        """ Make a connection with another node that is running on host with port.
+            When the connection is made, an event is triggered outbound_node_connected.
+            When the connection is made with the node, it exchanges the id's of the node.
+            First we send our id and then we receive the id of the node we are connected to.
+            When the connection is made the method outbound_node_connected is invoked.
+            If reconnect is True, the node will try to reconnect if the connection is closed """
 
         if host == self.host and port == self.port:
             print("connect_with_node: Cannot connect with yourself!!")
@@ -121,12 +123,12 @@ class P2PNode(Node):
             data = {'id': self.id, 'port': self.port}
             msg = json.dumps(data)
             sock.send(msg.encode('utf-8'))  # Send my id and port to the connected node
-            connected_node_id = sock.recv(4096).decode('utf-8')  # When a node is connected, it sends it id!
+            connected_node_id = sock.recv(4096).decode('utf-8')  # recieve id from connected node
 
             # Fix bug: Cannot connect with nodes that are already connected with us!
             for node in self.nodes_inbound:
                 if node.host == host and node.id == connected_node_id:
-                    print("connect_with_node: This node (" + node.id + ") is already connected with us.")
+                    print(f"connect_with_node: node ({node.id}) is already connected with us.")
                     return True
 
             thread_client = self.create_new_connection(sock, connected_node_id, host, port)
@@ -137,19 +139,20 @@ class P2PNode(Node):
 
             # If reconnection to this host is required, it will be added to the list!
             if reconnect:
-                self.debug_print("connect_with_node: Reconnection check is enabled on node " + host + ":" + str(port))
+                self.debug_print("connect_with_node: Reconnection check is enabled on node "
+                                 f"{host} {str(port)}")
                 self.reconnect_to_nodes.append({
                     "host": host, "port": port, "tries": 0
                 })
 
         except Exception as e:
-            self.debug_print("TcpServer.connect_with_node: Could not connect with node. (" + str(e) + ")")
+            self.debug_print(f"TcpServer.connect_with_node: Could not connect with node. ({str(e)}")
 
     def run(self):
-        """The main loop of the thread that deals with connections from other nodes on the network. When a
-           node is connected it will exchange the node id's. First we receive the id of the connected node
-           and secondly we will send our node id to the connected node. When connected the method
-           inbound_node_connected is invoked."""
+        """ The main loop of the thread that deals with connections from other nodes on the network.
+            When a node is connected it will exchange the node id's. First we receive the id of the
+            connected node and secondly we will send our node id to the connected node.
+            When connected the method inbound_node_connected is invoked. """
         while not self.terminate_flag.is_set():  # Check whether the thread needs to be closed
             try:
                 self.debug_print("Node: Wait for incoming connection")
@@ -159,10 +162,12 @@ class P2PNode(Node):
 
                 # Basic information exchange (not secure) of the id's of the nodes!
                 data = connection.recv(4096).decode('utf-8')
-                connected_node = json.loads(data)  # When a node is connected, it sends its id and port
+                connected_node = json.loads(data)  # a node sends its id and port upon connecting
                 connection.send(self.id.encode('utf-8'))  # Send my id to the connected node!
 
-                thread_client = self.create_new_connection(connection, connected_node["id"], client_address[0], connected_node["port"])
+                thread_client = self.create_new_connection(connection, connected_node["id"],
+                                                           client_address[0],
+                                                           connected_node["port"])
                 thread_client.start()
 
                 self.nodes_inbound.append(thread_client)

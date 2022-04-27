@@ -2,11 +2,11 @@ import hashlib
 import json
 import logging
 import os
+from ecdsa import VerifyingKey, SECP256k1
 from abc import ABC, abstractmethod
 from datetime import datetime
 from src.blockchain.merkle_tree import MerkleTree
 from src.db.mapper import Mapper
-import logging
 
 
 class Serializable(ABC):
@@ -20,11 +20,16 @@ class Serializable(ABC):
 
 
 class Transaction(Serializable):
-    def __init__(self, source=None, target=None, amount=0, timestamp=datetime.now()):
+    def __init__(self, source=None, target=None, amount=0, timestamp=datetime.now(),
+                 pubkey=None, sig=None):
         self.source = source
         self.target = target
         self.amount = amount
         self.timestamp = timestamp
+        if pubkey and sig:
+            self.pubkey = VerifyingKey.from_string(bytes.fromhex(pubkey), SECP256k1, hashlib.sha256,
+                                                   valid_encodings=['raw'])
+            self.sig = bytes.fromhex(sig)
 
     def set_pubkey(self, pubkey):
         self.pubkey = pubkey
@@ -36,12 +41,14 @@ class Transaction(Serializable):
     def from_dict(transaction_dict):
         if type(transaction_dict["timestamp"]) == str:
             timestamp = datetime.strptime(
-                transaction_dict["timestamp"], '%m/%d/%Y, %H:%M:%S')
+                transaction_dict["timestamp"], '%m/%d/%Y, %H:%M:%S'
+            )
         else:
             timestamp = transaction_dict["timestamp"]
 
         return Transaction(transaction_dict["source"], transaction_dict["target"],
-                           transaction_dict["amount"], timestamp)
+                           transaction_dict["amount"], timestamp, transaction_dict["pubkey"],
+                           transaction_dict["sig"])
 
     def to_dict(self):
         return {
@@ -49,6 +56,18 @@ class Transaction(Serializable):
             "target": self.target,
             "amount": self.amount,
             "timestamp": self.timestamp.strftime("%m/%d/%Y, %H:%M:%S")
+        }
+
+    def to_full_dict(self):
+        ''' Create a dict that also contains the pubkey and the signature for the transaction '''
+        return {
+            "source": self.source,
+            "target": self.target,
+            "amount": self.amount,
+            "timestamp": self.timestamp.strftime("%m/%d/%Y, %H:%M:%S"),
+            # get the text string representation of the ECDSA key binary blobs with hex()
+            "pubkey": self.pubkey.to_string().hex(),
+            "sig": self.sig.hex()
         }
 
     def hash(self):
@@ -85,7 +104,7 @@ class Transaction(Serializable):
         balance = self.get_balance()
         if balance < self.amount:
             logging.error(f"Not valid: {self.source} can't send {self.amount} "
-                  f"with balance of {balance}")
+                          f"with balance of {balance}")
             return False
 
         # verify the transaction signature
@@ -121,7 +140,7 @@ class Block(Serializable):
     def to_dict(self):
         transactions = list()
         for t in self.transactions:
-            transactions.append(t.to_dict())
+            transactions.append(t.to_full_dict())
 
         return {
             "predecessor": self.predecessor,
@@ -132,7 +151,7 @@ class Block(Serializable):
     def to_dict_with_hash(self):
         transactions = list()
         for t in self.transactions:
-            transactions.append(t.to_dict())
+            transactions.append(t.to_full_dict())
 
         return {
             "hash": self.hash(),
@@ -162,7 +181,7 @@ class Block(Serializable):
                 block_dict, sort_keys=True).encode("utf-8")
             return hashlib.sha256(serialized_block).hexdigest()
         else:
-            print("ERROR: No Nonce available jet. Mine it first!")
+            logging.error("No Nonce available jet. Mine it first!")
 
     def add_transaction(self, t):
         self.transactions.append(t)
@@ -184,7 +203,6 @@ class Block(Serializable):
         Mapper().write_block(hash, block)
 
     def find_nonce(self, difficulty=4):
-        print("hallo")
         transactions = list()
         for t in self.transactions:
             transactions.append(json.dumps(t.to_dict()))
@@ -192,19 +210,16 @@ class Block(Serializable):
         while True:
             # Try with this nonce
             transactions.append(str(nonce))
-            print(transactions)
             mtree = MerkleTree(transactions)
             t_hash = mtree.getRootHash()
-
-            print(t_hash)
 
             # check the result
             important_digits = t_hash[0:difficulty]
             not_null_digits = important_digits.replace("0", "")
             if len(not_null_digits) == 0:
-                print(f"Successfull at {nonce}")
+                logging.info(f"Successfull at {nonce}")
                 return nonce
             else:
-                print(f"not successfull at {nonce}")
+                logging.debug(f"not successfull at {nonce}")
                 transactions.pop()
                 nonce += 1

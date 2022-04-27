@@ -1,10 +1,10 @@
+import os
+import sys
+sys.path.append("..")
 from .block_download import Block_download
 from ..bo.messages.block_message import Block_message
 from src.db.mapper import Mapper
 from src.blockchain.block import Block
-import os
-import sys
-sys.path.append("..")
 
 
 class Block_broadcasting():
@@ -43,5 +43,6 @@ class Block_broadcasting():
         # relay block
         for conn in self.node.all_nodes:
             if conn.id != sender_node_conn.id:
-                print("relay block " + block.saved_hash + " from Node " + self.node.id + " to Node " + conn.id)
+                print("relay block " + block.saved_hash + " from Node " + self.node.id
+                      + "to Node " + conn.id)
                 self.node.send_to_node(conn, message)

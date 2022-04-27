@@ -1,6 +1,6 @@
-from .message import Message
 import sys
-sys.path.append("..")
+sys.path.append('..')
+from .message import Message
 from src.blockchain.block import Block
 
 

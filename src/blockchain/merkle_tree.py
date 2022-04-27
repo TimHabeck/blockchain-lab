@@ -31,7 +31,8 @@ class MerkleTree:
         half: int = len(nodes) // 2
 
         if len(nodes) == 2:
-            return Tree_Node(nodes[0], nodes[1], Tree_Node.doubleHash(nodes[0].value + nodes[1].value))
+            return Tree_Node(nodes[0], nodes[1], Tree_Node.doubleHash(nodes[0].value
+                                                                      + nodes[1].value))
 
         left: Tree_Node = self.__buildTreeRec(nodes[:half])
         right: Tree_Node = self.__buildTreeRec(nodes[half:])

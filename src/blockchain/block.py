@@ -113,7 +113,7 @@ class Transaction(Serializable):
             logging.error("Cannot verify transaction signature")
             return False
 
-        logging.debug("Transaction is valid")
+        logging.info("Transaction is valid")
         return True
 
 
@@ -125,10 +125,10 @@ class Block(Serializable):
         self.transactions = transactions
         self.nonce = nonce
         self.saved_hash = saved_hash
+        self.is_mining = True
 
     @staticmethod
     def from_dict(block_dict, block_hash):
-        logging.debug(f"{block_dict=}")
         block = Block(block_dict["predecessor"],
                       block_dict["transactions"], block_hash, int(block_dict["nonce"]))
         transaction_objects = []
@@ -187,39 +187,59 @@ class Block(Serializable):
         self.transactions.append(t)
 
     def validate(self):
-        for transaction in self.transactions:
+        for transaction in self.transactions:  # Validating each transaction
             if transaction.validate() is False:
                 return False
 
         if self.saved_hash != self.hash():
             logging.error("Not valid: recalculating the hash results in a different hash")
             return False
-        else:
-            return True
+
+        transactions = list()
+        for t in self.transactions:
+            transactions.append(json.dumps(t.to_dict()))
+        if not self.validate_nonce(transactions, self.nonce):
+            logging.error("Not valid: The Nonce does not fullfill the difficulty")
+            return False
+
+        logging.info("Block is valid")
+        return True
 
     def write_to_file(self):
         hash = self.hash()
         block = self.serialize()
         Mapper().write_block(hash, block)
 
-    def find_nonce(self, difficulty=4):
+    def stop_mining(self):
+        self.is_mining = False
+
+    def get_mining_status(self) -> bool:
+        return self.is_mining
+
+    def find_nonce(self):
         transactions = list()
         for t in self.transactions:
             transactions.append(json.dumps(t.to_dict()))
         nonce = 0
-        while True:
-            # Try with this nonce
-            transactions.append(str(nonce))
-            mtree = MerkleTree(transactions)
-            t_hash = mtree.getRootHash()
 
-            # check the result
-            important_digits = t_hash[0:difficulty]
-            not_null_digits = important_digits.replace("0", "")
-            if len(not_null_digits) == 0:
-                logging.info(f"Successfull at {nonce}")
+        while self.is_mining:
+            # Try with this nonce
+            if self.validate_nonce(transactions, nonce):
+                logging.info(f"successfull at {nonce}")
                 return nonce
             else:
                 logging.debug(f"not successfull at {nonce}")
-                transactions.pop()
-                nonce += 1
+            nonce += 1
+
+    def validate_nonce(self, transactions, nonce, difficulty=4):
+        transactions.append(str(nonce))
+        mtree = MerkleTree(transactions)
+        t_hash = mtree.getRootHash()
+        transactions.pop()
+        # check the result
+        important_digits = t_hash[0:difficulty]
+        not_null_digits = important_digits.replace("0", "")
+
+        if len(not_null_digits) == 0:
+            return True
+        return False

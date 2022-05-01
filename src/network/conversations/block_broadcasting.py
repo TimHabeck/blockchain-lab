@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 sys.path.append("..")
 from .block_download import Block_download
 from ..bo.messages.block_message import Block_message
@@ -17,7 +18,7 @@ class Block_broadcasting():
         self.node.send_to_nodes(msg.to_dict())
 
     # node that receives the block
-    def block_received(self, sender_node_conn, message):
+    def block_received(self, sender_node_conn, message) -> bool:
         msg_in = Block_message.from_dict(message)
         block = msg_in.get_block()
 
@@ -26,14 +27,14 @@ class Block_broadcasting():
 
         if block.validate() is False:
             print("The block is not valid")
-            return
+            return False
         if block.saved_hash in my_block_hashes:
             print("The local blockchain contains the block already")
-            return
+            return False
         if block.predecessor == local_latest_block_hash:
             block.write_to_file()
             Mapper().write_latest_block_hash(block.saved_hash)
-            print("block saved")
+            logging.info("block saved")
         else:
             print("the predecessor of the received block doesn't match the local latest block")
             print("initiate block download")
@@ -46,3 +47,4 @@ class Block_broadcasting():
                 print("relay block " + block.saved_hash + " from Node " + self.node.id
                       + "to Node " + conn.id)
                 self.node.send_to_node(conn, message)
+        return True

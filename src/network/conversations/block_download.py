@@ -53,7 +53,7 @@ class Block_download():
         successor_of_local_latest_block_count = 0
         if msg_in.get_info() == "already-synced":
             print("Already synced with peer")
-            return
+            return False
         if msg_in.get_info() == "fork-detected":
             print("the predecessor of the received block doesn't match "
                   "the local latest block")
@@ -67,27 +67,28 @@ class Block_download():
                 my_block_hashes = ''
                 local_latest_block_hash = ''
             else:
-                return
+                return False
 
         for block in msg_in.get_blocks():
             if block.validate() is False:
                 print("A block is not valid")
-                return
+                return False
             if block.saved_hash in my_block_hashes:
                 print("The local blockchain contains one of the blocks already")
-                return
+                return False
             if block.predecessor == local_latest_block_hash:
                 successor_of_local_latest_block_count += 1
 
         if successor_of_local_latest_block_count != 1 \
                 and msg_in.get_info() != "fork-detected":
             print("Not exactly one successor of the local latest block")
-            return
+            return False
 
         for block in msg_in.get_blocks():
             block.write_to_file()
             Mapper().write_latest_block_hash(block.saved_hash)
         print("block(s) saved")
+        return True
 
     # helper method
     def get_successor_block(self, predecessor_hash):

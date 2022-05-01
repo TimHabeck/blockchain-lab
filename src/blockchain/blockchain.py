@@ -14,7 +14,18 @@ class Blockchain():
         for transaction in transactions:
             block.add_transaction(transaction)
 
+        if node:
+            node.set_currently_mined_block(block)
+        else:
+            logging.error("No node specified, cannot mine block")
+            return
+
         block.nonce = block.find_nonce()
+
+        if not block.get_mining_status():
+            # don't save the local block if another node was faster
+            logging.info("Block from network recieved, discarding current block")
+            return
 
         block_hash = block.hash()
         logging.debug(f"{block_hash=}")
@@ -24,19 +35,19 @@ class Blockchain():
             cwd = os.path.dirname(os.getcwd())   # if in directory 'tests', go one directory up
         my_block_hashes = os.listdir(cwd + "/db/blocks/")
         if block.validate() is False:
-            print("The block is not valid")
+            logging.info("The block is not valid")
             return
         if block_hash in my_block_hashes:
-            print("The local blockchain contains the block already")
+            logging.info("The local blockchain contains the block already")
             return
         block.write_to_file()
         Mapper().write_latest_block_hash(block_hash)
-        print("block saved")
+        logging.info("block saved")
 
         if node:
             block_broadcasting = Block_broadcasting(node)
             block_broadcasting.broadcast_block(block)
-            print("block broadcasted")
+            logging.info("block broadcasted")
 
     def add_block_without_validation(self, transactions):
         pred_hash = Mapper().read_latest_block_hash()
@@ -49,7 +60,7 @@ class Blockchain():
 
         block.write_to_file()
         Mapper().write_latest_block_hash(block_hash)
-        print("block saved")
+        logging.info("block saved")
 
     def create_genesis_block(self):
         block = Block()

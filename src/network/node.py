@@ -1,6 +1,7 @@
 import time
 import json
 import socket
+import logging
 from p2pnetwork.node import Node
 from .bo.messages.prepare_to_validate import Prepare_to_validate
 from .conversations.block_download import Block_download
@@ -12,13 +13,18 @@ from .conversations.block_broadcasting import Block_broadcasting
 class P2PNode(Node):
 
     def __init__(self, host, port, id=None, callback=None, max_connections=0):
-        super(P2PNode, self).__init__(host, port, id, callback, max_connections)
+        super(P2PNode, self).__init__(
+            host, port, id, callback, max_connections)
         self.genesis_port = 80
         self.potential_peers = [self.genesis_port]
         self.conversations = {}
         self.debug = False
+        self.currently_mined_block = None
 
         print("MyPeer2PeerNode: Started")
+
+    def set_currently_mined_block(self, block):
+        self.currently_mined_block = block
 
     def outbound_node_connected(self, node):
         print("outbound_node_connected (" + self.id + "): " + node.id)
@@ -60,11 +66,15 @@ class P2PNode(Node):
 
         if message['name'] == 'blocks':
             block_download = Block_download(self)
-            block_download.blocks_received(message)
 
         if message['name'] == 'block':
             block_broadcasting = Block_broadcasting(self)
-            block_broadcasting.block_received(sender_node_conn, message)
+            # FIXME if the local node finds a valid block while the mining process is being
+            # terminated, there could be two valid blocks on the local node
+            if block_broadcasting.block_received(sender_node_conn, message):
+                if self.currently_mined_block:
+                    logging.info("Valid block from network reveived, stopping mining process")
+                    self.currently_mined_block.stop_mining()
 
         if message["name"] == 'prepare-to-validate':
             msg_in = Prepare_to_validate.from_dict(message)
@@ -82,7 +92,8 @@ class P2PNode(Node):
             validation.global_decision_received(message)
 
     def node_disconnect_with_outbound_node(self, node):
-        print("node wants to disconnect with oher outbound node: (" + self.id + "): " + node.id)
+        print("node wants to disconnect with oher outbound node: (" +
+              self.id + "): " + node.id)
 
     def node_request_to_stop(self):
         print("node is requested to stop (" + self.id + "): ")
@@ -111,7 +122,8 @@ class P2PNode(Node):
         # Check if node is already connected with this node!
         for node in self.nodes_outbound:
             if node.host == host and node.port == port:
-                print("connect_with_node: Already connected with this node (" + node.id + ").")
+                print(
+                    "connect_with_node: Already connected with this node (" + node.id + ").")
                 return True
 
         try:
@@ -122,16 +134,20 @@ class P2PNode(Node):
             # Basic information exchange (not secure) of the nodes!
             data = {'id': self.id, 'port': self.port}
             msg = json.dumps(data)
-            sock.send(msg.encode('utf-8'))  # Send my id and port to the connected node
-            connected_node_id = sock.recv(4096).decode('utf-8')  # recieve id from connected node
+            # Send my id and port to the connected node
+            sock.send(msg.encode('utf-8'))
+            connected_node_id = sock.recv(4096).decode(
+                'utf-8')  # recieve id from connected node
 
             # Fix bug: Cannot connect with nodes that are already connected with us!
             for node in self.nodes_inbound:
                 if node.host == host and node.id == connected_node_id:
-                    print(f"connect_with_node: node ({node.id}) is already connected with us.")
+                    print(
+                        f"connect_with_node: node ({node.id}) is already connected with us.")
                     return True
 
-            thread_client = self.create_new_connection(sock, connected_node_id, host, port)
+            thread_client = self.create_new_connection(
+                sock, connected_node_id, host, port)
             thread_client.start()
 
             self.nodes_outbound.append(thread_client)
@@ -146,7 +162,8 @@ class P2PNode(Node):
                 })
 
         except Exception as e:
-            self.debug_print(f"TcpServer.connect_with_node: Could not connect with node. ({str(e)}")
+            self.debug_print(
+                f"TcpServer.connect_with_node: Could not connect with node. ({str(e)}")
 
     def run(self):
         """ The main loop of the thread that deals with connections from other nodes on the network.
@@ -158,12 +175,15 @@ class P2PNode(Node):
                 self.debug_print("Node: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
 
-                self.debug_print("Total inbound connections:" + str(len(self.nodes_inbound)))
+                self.debug_print("Total inbound connections:" +
+                                 str(len(self.nodes_inbound)))
 
                 # Basic information exchange (not secure) of the id's of the nodes!
                 data = connection.recv(4096).decode('utf-8')
-                connected_node = json.loads(data)  # a node sends its id and port upon connecting
-                connection.send(self.id.encode('utf-8'))  # Send my id to the connected node!
+                # a node sends its id and port upon connecting
+                connected_node = json.loads(data)
+                # Send my id to the connected node!
+                connection.send(self.id.encode('utf-8'))
 
                 thread_client = self.create_new_connection(connection, connected_node["id"],
                                                            client_address[0],

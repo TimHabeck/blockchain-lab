@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 
@@ -14,7 +15,7 @@ class Mapper():
             with open(Mapper.blockchain_dir + "/" + str(hash), "wb") as file:
                 file.write(block)
         except EOFError:
-            print("Couldn't write block")
+            logging.error("Unable to write block")
 
     @staticmethod
     def read_block(block_hash):
@@ -23,7 +24,7 @@ class Mapper():
                 block_bytes = file.read()
                 return json.loads(block_bytes)
         except EOFError:
-            print("Couldn't read block")
+            logging.error("Unable to read block")
 
     @staticmethod
     def read_latest_block_hash():
@@ -31,7 +32,7 @@ class Mapper():
             with open(Mapper.latest_block_hash_file) as file:
                 return file.read()
         except EOFError:
-            print("Couldn't read latest-block-hash")
+            logging.error("Unable to read latest-block-hash")
 
     @staticmethod
     def write_latest_block_hash(hash):
@@ -39,4 +40,4 @@ class Mapper():
             with open(Mapper.latest_block_hash_file, "w") as file:
                 file.write(str(hash))
         except EOFError:
-            print("Couldn't write latest-block-hash")
+            logging.error("Unable to write latest-block-hash")

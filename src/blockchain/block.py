@@ -187,19 +187,18 @@ class Block(Serializable):
         self.transactions.append(t)
 
     def validate(self):
+        transactions = list()
         for transaction in self.transactions:  # Validating each transaction
             if transaction.validate() is False:
                 return False
+            transactions.append(json.dumps(transaction.to_dict()))
 
         if self.saved_hash != self.hash():
             logging.error("Not valid: recalculating the hash results in a different hash")
             return False
 
-        transactions = list()
-        for t in self.transactions:
-            transactions.append(json.dumps(t.to_dict()))
         if not self.validate_nonce(transactions, self.nonce):
-            logging.error("Not valid: The Nonce does not fullfill the difficulty")
+            logging.error(f"Not valid: Nonce {self.nonce} does not fullfill the difficulty")
             return False
 
         logging.info("Block is valid")

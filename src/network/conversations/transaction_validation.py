@@ -1,3 +1,4 @@
+import logging
 from ..bo.messages.prepare_to_validate import Prepare_to_validate
 from ..bo.messages.vote import Vote
 from ..bo.messages.global_decision import Global_decision
@@ -27,10 +28,10 @@ class Transaction_Validation():
 
         if valid:
             msg_out = Vote(True)
-            print("vote transaction valid")
+            logging.debug("vote transaction valid")
         else:
             msg_out = Vote(False)
-            print("vote transaction not valid")
+            logging.debug("vote transaction not valid")
 
         self.node.send_to_node(sender_node_conn, msg_out.to_dict())
 
@@ -47,10 +48,10 @@ class Transaction_Validation():
             if all(self.votes.values()):
                 # add transaction to mempool
                 msg_out = Global_decision(True)
-                print("transaction validated and added to mempool")
+                logging.debug("transaction validated and added to mempool")
             else:
                 msg_out = Global_decision(False)
-                print("transaction not valid")
+                logging.error("transaction not valid")
 
             self.node.send_to_nodes(msg_out.to_dict())
             self.votes.clear()
@@ -62,8 +63,8 @@ class Transaction_Validation():
 
         if msg.get_valid():
             # add transaction to mempool
-            print("transaction validated and added to mempool")
+            logging.debug("transaction validated and added to mempool")
         else:
-            print("transaction not valid")
+            logging.error("transaction not valid")
 
         self.node.conversations.pop("transaction_validation")

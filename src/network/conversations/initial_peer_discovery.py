@@ -1,3 +1,4 @@
+import logging
 from ..bo.peer import Peer
 from ..bo.messages.addr import Addr
 from ..bo.messages.connection_accepted import Connection_accepted
@@ -31,7 +32,7 @@ class Initial_Peer_Discovery():
             self.node.potential_peers.append(peer.get_port())
 
         self.node.connect_with_node('127.0.0.1', self.node.potential_peers[0])
-        print(self.node.potential_peers)
+        logging.info(f"Potential peers: {self.node.potential_peers}")
 
     # node that accepts connection
     def send_connection_accepted(self, node_connection):

@@ -1,5 +1,6 @@
-from typing import List
 import hashlib
+import logging
+from typing import List
 
 
 class Tree_Node:
@@ -31,8 +32,8 @@ class MerkleTree:
         half: int = len(nodes) // 2
 
         if len(nodes) == 2:
-            return Tree_Node(nodes[0], nodes[1], Tree_Node.doubleHash(nodes[0].value
-                                                                      + nodes[1].value))
+            return Tree_Node(nodes[0], nodes[1],
+                             Tree_Node.doubleHash(nodes[0].value + nodes[1].value))
 
         left: Tree_Node = self.__buildTreeRec(nodes[:half])
         right: Tree_Node = self.__buildTreeRec(nodes[half:])
@@ -44,7 +45,7 @@ class MerkleTree:
 
     def __printTreeRec(self, node) -> None:
         if node is not None:
-            print(node.value)
+            logging.info(node.value)
             self.__printTreeRec(node.left)
             self.__printTreeRec(node.right)
 

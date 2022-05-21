@@ -220,30 +220,60 @@ class Block(Serializable):
         transactions = list()
         for t in self.transactions:
             transactions.append(json.dumps(t.to_dict()))
+        # nonce = 0
 
-        with open("nonce_list.txt", "a") as f:
-            pass
-        
-        with open("nonce_list.txt", "r") as f:
-            for n in f:
-                nonce_list.append(int(n))
-        nonce = 0
+        # while self.is_mining:
+        #     # Try with this nonce
+        #     if self.validate_nonce(transactions, nonce):
+        #         logging.info(f"successfull at {nonce}")
+        #         return nonce
+        #     else:
+        #         logging.debug(f"not successfull at {nonce}")
+        #     nonce += 1
 
+        # FIXME check if a max boundary of 2**32 is too much for our test case
+        # when starting at 33000, we have 17 values until 2*32 and 16 values until 1
+        start_value = 33000
+        iterations = 0
+        start_time = datetime.now()
+        used_numbers = []
         while self.is_mining:
-            # Try with this nonce
-            if self.validate_nonce(transactions, nonce):
-                logging.info(f"successfull at {nonce}")
-                with open("nonce_list.txt", "a") as f:
-                    f.write(str(nonce) + "\n")
-                    nonce_list.append(int(nonce))
-                return nonce
-            elif nonce in nonce_list:
-                logging.info(f"skipped {nonce} in {nonce_list}")
-                nonce+=1
+            nonce = start_value
+            while True:
+                if nonce not in used_numbers:
+                    if self.validate_nonce(transactions, nonce):
+                        logging.info(f"successfull at {nonce}")
+                        print(used_numbers)
+                        logging.debug(f"{start_value=}\t{iterations=}")
+                        logging.debug(f"took {datetime.now() - start_time}")
+                        return nonce
+                    used_numbers.append(nonce)
+                    iterations += 1
+                logging.debug(f"not successfull at {nonce}")
+                nonce = nonce << 1
+                if nonce > 2**32:   # make sure we stay in our bounds
+                    break
 
-            else:
-                logging.debug(f"not successfull at {nonce}")     
-            nonce += 1
+            nonce = start_value     # reset the nonce
+            while True:
+                if nonce not in used_numbers:
+                    if self.validate_nonce(transactions, nonce):
+                        logging.info(f"successfull at {nonce}")
+                        print(used_numbers)
+                        logging.debug(f"{start_value=}\t{iterations=}")
+                        logging.debug(f"took {datetime.now() - start_time}")
+                        return nonce
+                    used_numbers.append(nonce)
+                    iterations += 1
+                logging.debug(f"not successfull at {nonce}")
+                nonce = nonce >> 1
+                if nonce < 1:   # check for 1, since we never reach 0
+                    break
+            start_value += 1
+
+            # at 130000 we have 16 values until 2*32 and 17 values until 1
+            if start_value > 130000:
+                self.is_mining = False
 
     def validate_nonce(self, transactions, nonce, difficulty=4):
         transactions.append(str(nonce))

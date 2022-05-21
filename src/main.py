@@ -3,11 +3,13 @@ import os
 import logging
 from Crypto.PublicKey import RSA
 from network.node import P2PNode
-from network.conversations.transaction_validation import Transaction_Validation
 from ecdsa import SigningKey, SECP256k1
 from hashlib import sha256
 from src.blockchain.block import Transaction
 from src.blockchain.blockchain import Blockchain
+
+# FIXME remove later
+from datetime import datetime
 
 
 if __name__ == "__main__":
@@ -41,33 +43,23 @@ if __name__ == "__main__":
         possible_inputs = ['s', 'v', 't']
         user_input = ''
         while user_input not in possible_inputs:
-            user_input = input("type 's' to stop the node\ntype 'v' to validate a transaction \n "
-                               "type 't' to create transactions, create a block and "
-                               "broadcast it to the network \n")
+            user_input = input("(s)\tstop the node\n(t)\tcreate transactions, "
+                               "put them in a block and broadcast it to the network\n")
 
             if user_input == 's':
                 node.stop()
-
-            elif user_input == 'v':
-                # validate transaction first... if valid:
-                transaction = {'hash': 'test'}
-
-                validation = Transaction_Validation(node, transaction)
-                node.conversations["transaction_validation"] = validation
-                validation.send_prepare_to_validate()
-
-                user_input = ''
 
             elif user_input == 't':
                 transactions = []
                 create_transactions = True
                 while create_transactions:
                     print("create a transaction:")
-                    source = input("type the sender: \n")
-                    target = input("type the receiver: \n")
-                    amount = input("type the amount: \n")
+                    # source = input("type the sender: \n")
+                    # target = input("type the receiver: \n")
+                    # amount = input("type the amount: \n")
 
-                    transaction = Transaction(source, target, float(amount))
+                    # transaction = Transaction(source, target, float(amount))
+                    transaction = Transaction('1', '1', 1.0, datetime(2022, 5, 25, 22, 1, 44))
                     tx_hash = transaction.hash()
                     logging.debug(f"Created transaction {transaction.to_dict()}")
                     logging.debug(f"Hash of transaction is {tx_hash}")

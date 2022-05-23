@@ -216,18 +216,33 @@ class Block(Serializable):
         return self.is_mining
 
     def find_nonce(self):
+        nonce_list = []
         transactions = list()
         for t in self.transactions:
             transactions.append(json.dumps(t.to_dict()))
+
+        with open("nonce_list.txt", "a") as f:
+            pass
+        
+        with open("nonce_list.txt", "r") as f:
+            for n in f:
+                nonce_list.append(int(n))
         nonce = 0
 
         while self.is_mining:
             # Try with this nonce
             if self.validate_nonce(transactions, nonce):
                 logging.info(f"successfull at {nonce}")
+                with open("nonce_list.txt", "a") as f:
+                    f.write(str(nonce) + "\n")
+                    nonce_list.append(int(nonce))
                 return nonce
+            elif nonce in nonce_list:
+                logging.info(f"skipped {nonce} in {nonce_list}")
+                nonce+=1
+
             else:
-                logging.debug(f"not successfull at {nonce}")
+                logging.debug(f"not successfull at {nonce}")     
             nonce += 1
 
     def validate_nonce(self, transactions, nonce, difficulty=4):

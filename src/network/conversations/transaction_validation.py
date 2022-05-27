@@ -1,7 +1,7 @@
 import logging
-from ..bo.messages.prepare_to_validate import Prepare_to_validate
-from ..bo.messages.vote import Vote
-from ..bo.messages.global_decision import Global_decision
+from network.bo.messages.prepare_to_validate import Prepare_to_validate
+from network.bo.messages.vote import Vote
+from network.bo.messages.global_decision import Global_decision
 
 
 class Transaction_Validation():

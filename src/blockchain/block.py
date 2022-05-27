@@ -5,8 +5,8 @@ import os
 from ecdsa import VerifyingKey, SECP256k1
 from abc import ABC, abstractmethod
 from datetime import datetime
-from src.blockchain.merkle_tree import MerkleTree
-from src.db.mapper import Mapper
+from .merkle_tree import MerkleTree
+from db.mapper import Mapper
 
 
 class Serializable(ABC):
@@ -127,6 +127,12 @@ class Block(Serializable):
         self.saved_hash = saved_hash
         self.is_mining = True
 
+    def set_nonce(self, nonce):
+        self.nonce = nonce
+
+    def set_saved_hash(self, saved_hash):
+        self.saved_hash = saved_hash
+
     @staticmethod
     def from_dict(block_dict, block_hash):
         block = Block(block_dict["predecessor"],
@@ -215,65 +221,96 @@ class Block(Serializable):
     def get_mining_status(self) -> bool:
         return self.is_mining
 
-    def find_nonce(self):
-        nonce_list = []
+    def get_iterations(self):
+        return self.iterations
+
+    def find_nonce(self, difficulty=4, method='bruteforce'):
         transactions = list()
         for t in self.transactions:
             transactions.append(json.dumps(t.to_dict()))
-        # nonce = 0
 
-        # while self.is_mining:
-        #     # Try with this nonce
-        #     if self.validate_nonce(transactions, nonce):
-        #         logging.info(f"successfull at {nonce}")
-        #         return nonce
-        #     else:
-        #         logging.debug(f"not successfull at {nonce}")
-        #     nonce += 1
+        # FIXME find a more concise way to check this
+        if method == 'bruteforce':
+            nonce = 0
+            while self.is_mining:
+                # Try with this nonce
+                if self.validate_nonce(transactions, nonce, difficulty):
+                    logging.info(f"successfull at {nonce}")
+                    return nonce
+                else:
+                    logging.debug(f"not successfull at {nonce}")
+                nonce += 1
 
-        # FIXME check if a max boundary of 2**32 is too much for our test case
-        # when starting at 33000, we have 17 values until 2*32 and 16 values until 1
-        start_value = 33000
-        iterations = 0
-        start_time = datetime.now()
-        used_numbers = []
-        while self.is_mining:
-            nonce = start_value
-            while True:
-                if nonce not in used_numbers:
-                    if self.validate_nonce(transactions, nonce):
-                        logging.info(f"successfull at {nonce}")
-                        print(used_numbers)
-                        logging.debug(f"{start_value=}\t{iterations=}")
-                        logging.debug(f"took {datetime.now() - start_time}")
-                        return nonce
-                    used_numbers.append(nonce)
-                    iterations += 1
-                logging.debug(f"not successfull at {nonce}")
-                nonce = nonce << 1
-                if nonce > 2**32:   # make sure we stay in our bounds
-                    break
+        elif method == 'nonce-skip':
+            nonce_list = []
+            with open("nonce_list.txt", "a") as f:
+                pass
 
-            nonce = start_value     # reset the nonce
-            while True:
-                if nonce not in used_numbers:
-                    if self.validate_nonce(transactions, nonce):
-                        logging.info(f"successfull at {nonce}")
-                        print(used_numbers)
-                        logging.debug(f"{start_value=}\t{iterations=}")
-                        logging.debug(f"took {datetime.now() - start_time}")
-                        return nonce
-                    used_numbers.append(nonce)
-                    iterations += 1
-                logging.debug(f"not successfull at {nonce}")
-                nonce = nonce >> 1
-                if nonce < 1:   # check for 1, since we never reach 0
-                    break
-            start_value += 1
+            with open("nonce_list.txt", "r") as f:
+                for n in f:
+                    nonce_list.append(int(n))
 
-            # at 130000 we have 16 values until 2*32 and 17 values until 1
-            if start_value > 130000:
-                self.is_mining = False
+            nonce = 0
+            iterations = 0
+            while self.is_mining:
+                # Try with this nonce
+                if self.validate_nonce(transactions, nonce, difficulty):
+                    logging.info(f"successfull at {nonce}")
+                    with open("nonce_list.txt", "a") as f:
+                        f.write(str(nonce) + "\n")
+                        nonce_list.append(int(nonce))
+                    self.iterations = iterations
+                    return nonce
+                elif nonce in nonce_list:
+                    logging.info(f"skipped {nonce} in {nonce_list}")
+                    nonce += 1
+                    continue
+                else:
+                    logging.debug(f"not successfull at {nonce}")
+                nonce += 1
+                iterations += 1
+
+        elif method == 'bitshift':
+            # FIXME check if a max boundary of 2**32 is too much for our test case
+            # when starting at 33000, we have 17 values until 2*32 and 16 values until 1
+            start_value = 33000
+            iterations = 0
+            used_numbers = []
+            while self.is_mining:
+                nonce = start_value
+                while True:
+                    if nonce not in used_numbers:
+                        if self.validate_nonce(transactions, nonce, difficulty):
+                            logging.info(f"successfull at {nonce}")
+                            logging.debug(f"{start_value=}\t{iterations=}")
+                            self.iterations = iterations
+                            return nonce
+                        used_numbers.append(nonce)
+                        iterations += 1
+                    logging.debug(f"not successfull at {nonce}")
+                    nonce = nonce << 1
+                    if nonce > 2**32:   # make sure we stay in our bounds
+                        break
+
+                nonce = start_value     # reset the nonce
+                while True:
+                    if nonce not in used_numbers:
+                        if self.validate_nonce(transactions, nonce, difficulty):
+                            logging.info(f"successfull at {nonce}")
+                            logging.debug(f"{start_value=}\t{iterations=}")
+                            self.iterations = iterations
+                            return nonce
+                        used_numbers.append(nonce)
+                        iterations += 1
+                    logging.debug(f"not successfull at {nonce}")
+                    nonce = nonce >> 1
+                    if nonce < 1:   # check for 1, since we never reach 0
+                        break
+                start_value += 1
+
+                # at 130000 we have 16 values until 2*32 and 17 values until 1
+                if start_value > 130000:
+                    self.is_mining = False
 
     def validate_nonce(self, transactions, nonce, difficulty=4):
         transactions.append(str(nonce))

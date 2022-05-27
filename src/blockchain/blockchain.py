@@ -1,9 +1,9 @@
 import hashlib
 import os
 import logging
-from src.blockchain.block import Block
-from src.db.mapper import Mapper
-from src.network.conversations.block_broadcasting import Block_broadcasting
+from blockchain.block import Block
+from db.mapper import Mapper
+from network.conversations.block_broadcasting import Block_broadcasting
 
 
 class Blockchain():
@@ -20,7 +20,7 @@ class Blockchain():
             logging.error("No node specified, cannot mine block")
             return
 
-        block.nonce = block.find_nonce()
+        block.set_nonce(block.find_nonce())
 
         if not block.get_mining_status():
             # don't save the local block if another node was faster
@@ -29,7 +29,7 @@ class Blockchain():
 
         block_hash = block.hash()
         logging.debug(f"{block_hash=}")
-        block.saved_hash = block_hash
+        block.set_saved_hash(block_hash)
         cwd = os.getcwd()
         if cwd.endswith('tests'):
             cwd = os.path.dirname(os.getcwd())   # if in directory 'tests', go one directory up

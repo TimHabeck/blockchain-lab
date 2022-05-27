@@ -1,7 +1,5 @@
-import sys
-sys.path.append('..')
 from .message import Message
-from src.blockchain.block import Block
+from blockchain.block import Block
 
 
 class Blocks(Message):

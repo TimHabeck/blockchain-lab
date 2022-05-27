@@ -1,11 +1,9 @@
 import logging
 import os
-import sys
-sys.path.append("..")
 from ..bo.messages.get_blocks import Get_blocks
 from ..bo.messages.blocks import Blocks
-from src.db.mapper import Mapper
-from src.blockchain.block import Block
+from db.mapper import Mapper
+from blockchain.block import Block
 
 
 class Block_download():

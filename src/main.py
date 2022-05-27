@@ -5,11 +5,8 @@ from Crypto.PublicKey import RSA
 from network.node import P2PNode
 from ecdsa import SigningKey, SECP256k1
 from hashlib import sha256
-from src.blockchain.block import Transaction
-from src.blockchain.blockchain import Blockchain
-
-# FIXME remove later
-from datetime import datetime
+from blockchain.block import Transaction
+from blockchain.blockchain import Blockchain
 
 
 if __name__ == "__main__":
@@ -54,12 +51,11 @@ if __name__ == "__main__":
                 create_transactions = True
                 while create_transactions:
                     print("create a transaction:")
-                    # source = input("type the sender: \n")
-                    # target = input("type the receiver: \n")
-                    # amount = input("type the amount: \n")
+                    source = input("type the sender: \n")
+                    target = input("type the receiver: \n")
+                    amount = input("type the amount: \n")
 
-                    # transaction = Transaction(source, target, float(amount))
-                    transaction = Transaction('1', '1', 1.0, datetime(2022, 5, 25, 22, 1, 44))
+                    transaction = Transaction(source, target, float(amount))
                     tx_hash = transaction.hash()
                     logging.debug(f"Created transaction {transaction.to_dict()}")
                     logging.debug(f"Hash of transaction is {tx_hash}")

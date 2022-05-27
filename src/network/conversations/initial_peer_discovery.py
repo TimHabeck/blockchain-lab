@@ -1,7 +1,7 @@
 import logging
-from ..bo.peer import Peer
-from ..bo.messages.addr import Addr
-from ..bo.messages.connection_accepted import Connection_accepted
+from network.bo.peer import Peer
+from network.bo.messages.addr import Addr
+from network.bo.messages.connection_accepted import Connection_accepted
 
 
 class Initial_Peer_Discovery():

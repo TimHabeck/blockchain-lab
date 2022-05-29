@@ -3,9 +3,7 @@ Herzlich Willkommen!
 
 ## Einleitung
 Dies ist die Realisierung einer einfachen Blockchain für das Modul Blockchain Lab des Studiengangs
-Wirtschaftsinformatik und digitale Medien an der Hochschule der Medien im Wintersemester 21/22. Das Projekt
-wird in einem Team bestehend aus zwei Personen bearbeitet und zeigt als Endprodukt eine einfache Implementierung 
-einer Blockchain mit einem Peer-to-Peer Netzwerk.
+Wirtschaftsinformatik und digitale Medien an der Hochschule der Medien im Sommersemester 2022. Das Projekt begann im Wintersemester 21/22 und wird im Sommesemester 2022 forgeführt. Es zeigt als Endprodukt eine einfache Implementierung einer Blockchain mit einem Peer-to-Peer Netzwerk.
 
 ## Inhalt
 Wir haben zu Ihrer Unterstützung einige Markdown-Dokumente angelegt, die weitere Informationen
@@ -23,3 +21,4 @@ in der Blockchain aller Nodes gespecihert, wenn valide
 - Invalide Transaktionen werden nicht von den Nodes gespeichert
 - Teile der Blockchain oder die ganze Blockchain von anderen Nodes können heruntergeladen werden, durch eine vereinfachte Version des Initial Block Downloads von Bitcoin
 - Resynchronisation der Nodes nach einem Fork in bestimmten Situationen
+- Proof of work (& optimization)

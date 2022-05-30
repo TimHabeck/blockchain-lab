@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from src.blockchain.merkle_tree import MerkleTree
 from src.db.mapper import Mapper
+import multiprocessing as mp
+import time
 
 
 class Serializable(ABC):
@@ -215,7 +217,52 @@ class Block(Serializable):
     def get_mining_status(self) -> bool:
         return self.is_mining
 
-    def find_nonce(self):
+    def mine_multithreaded(self):
+        max = 40000000
+        
+        cpus = mp.cpu_count()
+
+        individual_load = int((max/cpus) - (max/cpus)%1)
+
+        processes = []
+        manager = mp.Manager()
+        shared_dict = manager.dict()
+        shared_dict["nonce"] = None
+        shared_dict["finished"] = []
+        run = manager.Event()
+        run.set()  # We should keep running.
+
+        for i in range(cpus):
+            process = mp.Process(target=self.find_nonce, args=(shared_dict, i, cpus, individual_load+1))
+            processes.append(process)
+
+        print(processes)
+
+        for i in processes:
+            if shared_dict["nonce"] is None:
+                i.start()
+            else:
+                break
+            time.sleep(0.1)
+        
+        while True:
+            if shared_dict["nonce"] is not None:
+                print("nonce found")
+                for i in processes:
+                    if i.is_alive():
+                        i.terminate()
+                break
+            elif len(shared_dict["finished"]) == cpus:
+                print("Nothing found")
+                break
+            else:
+                time.sleep(0.1)
+
+        print("something happended")
+        
+        return shared_dict["nonce"]
+
+    def find_nonce(self, shared_dict, start=0, steps=1, times=1000):
         transactions = list()
         for t in self.transactions:
             transactions.append(json.dumps(t.to_dict()))
@@ -225,6 +272,7 @@ class Block(Serializable):
             # Try with this nonce
             if self.validate_nonce(transactions, nonce):
                 logging.info(f"successfull at {nonce}")
+                shared_dict["nonce"] = nonce
                 return nonce
             else:
                 logging.debug(f"not successfull at {nonce}")

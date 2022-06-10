@@ -2,9 +2,11 @@ import hashlib
 import json
 import logging
 import os
+import numpy as np
 from ecdsa import VerifyingKey, SECP256k1
 from abc import ABC, abstractmethod
 from datetime import datetime
+from sklearn.cluster import KMeans
 from .merkle_tree import MerkleTree
 from db.mapper import Mapper
 
@@ -119,16 +121,20 @@ class Transaction(Serializable):
 
 class Block(Serializable):
     def __init__(self, pred=None, transactions=None, saved_hash=None, nonce=None):
-        if transactions is None:
+        if not transactions:
             transactions = list()
         self.predecessor = pred
         self.transactions = transactions
         self.nonce = nonce
         self.saved_hash = saved_hash
         self.is_mining = True
+        self.nonce_list = []
 
     def set_nonce(self, nonce):
         self.nonce = nonce
+
+    def get_nonce(self):
+        return self.nonce
 
     def set_saved_hash(self, saved_hash):
         self.saved_hash = saved_hash
@@ -215,63 +221,83 @@ class Block(Serializable):
         block = self.serialize()
         Mapper().write_block(hash, block)
 
-    def stop_mining(self):
+    def stop_mining(self) -> None:
         self.is_mining = False
 
     def get_mining_status(self) -> bool:
         return self.is_mining
 
-    def get_iterations(self):
+    def get_iterations(self) -> int:
         return self.iterations
+
+    def determine_start_nonce(self) -> int:
+        # convert the read data into a list of integers
+        data = Mapper().read_nonce_list()
+        if data:
+            data = data.split('\n')         # str.split() returns a list of strings
+            data.pop(-1)                    # remove the last element, since it is an empty string
+            self.nonce_list = sorted(list(map(int, data)))  # convert all str to int and sort
+
+        # only cluster every 5 blocks and when we have enough initial values
+        if len(self.nonce_list) >= 15 and len(self.nonce_list) % 5 == 0:
+            data = np.array(self.nonce_list)
+            kmeans = KMeans(n_clusters=3).fit(data.reshape(-1, 1))
+            kmeans.predict(data.reshape(-1, 1))
+            # return the mean value between the first centroid and the smallest nonce in the list
+            # FIXME using the standard deviation might make more sense here
+            return int((int(min(kmeans.cluster_centers_)[0]) + min(self.nonce_list)) / 2)
+        # else return the last determined start nonce
+        return int(Mapper().read_latest_start_nonce())
 
     def find_nonce(self, difficulty=4, method='bruteforce'):
         transactions = list()
         for t in self.transactions:
             transactions.append(json.dumps(t.to_dict()))
 
-        # FIXME find a more concise way to check this
         if method == 'bruteforce':
             nonce = 0
             while self.is_mining:
                 # Try with this nonce
                 if self.validate_nonce(transactions, nonce, difficulty):
                     logging.info(f"successfull at {nonce}")
+                    self.nonce = nonce
                     return nonce
                 else:
                     logging.debug(f"not successfull at {nonce}")
                 nonce += 1
 
         elif method == 'nonce-skip':
-            nonce_list = []
-            with open("nonce_list.txt", "a") as f:
-                pass
-
-            with open("nonce_list.txt", "r") as f:
-                for n in f:
-                    nonce_list.append(int(n))
-
-            nonce = 0
+            nonce = self.determine_start_nonce()
+            print(nonce)
+            Mapper().write_latest_start_nonce(str(nonce).encode())
+            # remove all elements from the nonce_list that are smaller than the starting nonce
+            self.nonce_list = list(filter(lambda x: x >= nonce, self.nonce_list))
+            index = 0
             iterations = 0
             while self.is_mining:
-                # Try with this nonce
-                if self.validate_nonce(transactions, nonce, difficulty):
-                    logging.info(f"successfull at {nonce}")
-                    with open("nonce_list.txt", "a") as f:
-                        f.write(str(nonce) + "\n")
-                        nonce_list.append(int(nonce))
-                    self.iterations = iterations
-                    return nonce
-                elif nonce in nonce_list:
-                    logging.info(f"skipped {nonce} in {nonce_list}")
+                # check if the nonce has already been used
+                if self.nonce_list and nonce == self.nonce_list[index]:
+                    logging.info(f"skipped {nonce}")
                     nonce += 1
+                    # check if we reached the end of the list
+                    if not (index + 1 == len(self.nonce_list)):
+                        index += 1
                     continue
+                elif self.validate_nonce(transactions, nonce, difficulty):
+                    logging.info(f"successfull at {nonce}")
+                    self.nonce = nonce
+                    self.iterations = iterations + 1
+                    Mapper().append_to_nonce_list(nonce)
+                    return nonce
                 else:
                     logging.debug(f"not successfull at {nonce}")
                 nonce += 1
                 iterations += 1
+                # stop when we reach the limit of a 32-bit integer
+                if nonce > 2**32:
+                    self.is_mining = False
 
         elif method == 'bitshift':
-            # FIXME check if a max boundary of 2**32 is too much for our test case
             # when starting at 33000, we have 17 values until 2*32 and 16 values until 1
             start_value = 33000
             iterations = 0

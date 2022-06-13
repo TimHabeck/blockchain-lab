@@ -246,7 +246,13 @@ class Block(Serializable):
             time.sleep(0.1)
         
         while True:
-            if shared_dict["nonce"] is not None:
+            if not self.is_mining:
+                print("mining will be stopped for external reasons")
+                for i in processes:
+                    if i.is_alive():
+                        i.terminate()
+                break
+            elif shared_dict["nonce"] is not None:
                 print("nonce found")
                 for i in processes:
                     if i.is_alive():

@@ -237,7 +237,7 @@ class Block(Serializable):
             processes.append(process)
 
         print(processes)
-
+        t1 = time.time()
         for i in processes:
             if shared_dict["nonce"] is None:
                 i.start()
@@ -263,6 +263,10 @@ class Block(Serializable):
                 break
             else:
                 time.sleep(0.1)
+        t2 = time.time()
+        td = t2-t1
+        round(td, 2)
+        print(td)
 
         print("something happended")
         
@@ -272,7 +276,7 @@ class Block(Serializable):
         transactions = list()
         for t in self.transactions:
             transactions.append(json.dumps(t.to_dict()))
-        nonce = 0
+        nonce = start
 
         while self.is_mining:
             # Try with this nonce
@@ -282,9 +286,9 @@ class Block(Serializable):
                 return nonce
             else:
                 logging.debug(f"not successfull at {nonce}")
-            nonce += 1
+            nonce += steps
 
-    def validate_nonce(self, transactions, nonce, difficulty=4):
+    def validate_nonce(self, transactions, nonce, difficulty=5):
         transactions.append(str(nonce))
         mtree = MerkleTree(transactions)
         t_hash = mtree.getRootHash()

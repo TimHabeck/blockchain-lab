@@ -9,6 +9,8 @@ from .conversations.transaction_validation import Transaction_Validation
 from .conversations.initial_peer_discovery import Initial_Peer_Discovery
 from .conversations.block_broadcasting import Block_broadcasting
 
+log = logging.getLogger()
+
 
 class P2PNode(Node):
 
@@ -21,16 +23,16 @@ class P2PNode(Node):
         self.debug = False
         self.currently_mined_block = None
 
-        logging.info("MyPeer2PeerNode: Started")
+        log.info("MyPeer2PeerNode: Started")
 
     def set_currently_mined_block(self, block):
         self.currently_mined_block = block
 
     def outbound_node_connected(self, node):
-        logging.info("outbound_node_connected (" + self.id + "): " + node.id)
+        log.info("outbound_node_connected (" + self.id + "): " + node.id)
 
     def inbound_node_connected(self, node):
-        logging.info("inbound_node_connected: (" + self.id + "): " + node.id)
+        log.info("inbound_node_connected: (" + self.id + "): " + node.id)
 
         # When maximum connections is reached, send host and port of all peers and disconnect
         peer_discovery = Initial_Peer_Discovery(self)
@@ -40,16 +42,16 @@ class P2PNode(Node):
             peer_discovery.send_connection_accepted(node)
 
     def inbound_node_disconnected(self, node):
-        logging.info("inbound_node_disconnected: (" + self.id + "): " + node.id)
+        log.info("inbound_node_disconnected: (" + self.id + "): " + node.id)
         self.print_conns()
 
     def outbound_node_disconnected(self, node):
-        logging.info("outbound_node_disconnected: (" + self.id + "): " + node.id)
+        log.info("outbound_node_disconnected: (" + self.id + "): " + node.id)
         self.print_conns()
 
     def node_message(self, sender_node_conn, message):
-        logging.info(f"node_message ({self.id}) from {sender_node_conn.id}: {message['name']} "
-                     f"with payload {str(message)}")
+        log.info(f"node_message ({self.id}) from {sender_node_conn.id}: {message['name']} "
+                 f"with payload {str(message)}")
 
         if message['name'] == 'addr':
             # addr is received from disconnecting nodes, contains addresses from potential peers
@@ -74,7 +76,7 @@ class P2PNode(Node):
             # terminated, there could be two valid blocks on the local node
             if block_broadcasting.block_received(sender_node_conn, message):
                 if self.currently_mined_block:
-                    logging.info("Valid block from network reveived, stopping mining process")
+                    log.info("Valid block from network reveived, stopping mining process")
                     self.currently_mined_block.stop_mining()
 
         if message["name"] == 'prepare-to-validate':
@@ -93,11 +95,11 @@ class P2PNode(Node):
             validation.global_decision_received(message)
 
     def node_disconnect_with_outbound_node(self, node):
-        logging.debug("node wants to disconnect with oher outbound node: "
-                      f"({self.id}): {node.id}")
+        log.debug("node wants to disconnect with oher outbound node: "
+                  f"({self.id}): {node.id}")
 
     def node_request_to_stop(self):
-        logging.info("node is requested to stop (" + self.id + "): ")
+        log.info("node is requested to stop (" + self.id + "): ")
 
     def print_conns(self):
         for conn in self.nodes_outbound:
@@ -117,13 +119,13 @@ class P2PNode(Node):
             If reconnect is True, the node will try to reconnect if the connection is closed """
 
         if host == self.host and port == self.port:
-            logging.error("connect_with_node: Cannot connect with yourself!!")
+            log.error("connect_with_node: Cannot connect with yourself!!")
             return False
 
         # Check if node is already connected with this node!
         for node in self.nodes_outbound:
             if node.host == host and node.port == port:
-                logging.error(
+                log.error(
                     "connect_with_node: Already connected with this node (" + node.id + ").")
                 return True
 
@@ -143,7 +145,7 @@ class P2PNode(Node):
             # Fix bug: Cannot connect with nodes that are already connected with us!
             for node in self.nodes_inbound:
                 if node.host == host and node.id == connected_node_id:
-                    logging.error(
+                    log.error(
                         f"connect_with_node: node ({node.id}) is already connected with us.")
                     return True
 
@@ -204,7 +206,7 @@ class P2PNode(Node):
 
             time.sleep(0.01)
 
-        logging.info("Node stopping...")
+        log.info("Node stopping...")
         for t in self.nodes_inbound:
             t.stop()
 
@@ -221,10 +223,9 @@ class P2PNode(Node):
 
         self.sock.settimeout(None)
         self.sock.close()
-        logging.info("Node stopped")
+        log.info("Node stopped")
 
     def start_up(self):
-
         self.start()
         if self.port != self.genesis_port:
             self.connect_with_node('127.0.0.1', self.genesis_port)

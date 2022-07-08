@@ -2,6 +2,8 @@ import hashlib
 import logging
 from typing import List
 
+log = logging.getLogger()
+
 
 class Tree_Node:
     def __init__(self, left, right, value: str) -> None:
@@ -45,7 +47,7 @@ class MerkleTree:
 
     def __printTreeRec(self, node) -> None:
         if node is not None:
-            logging.info(node.value)
+            log.info(node.value)
             self.__printTreeRec(node.left)
             self.__printTreeRec(node.right)
 

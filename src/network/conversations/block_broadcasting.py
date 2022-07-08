@@ -5,6 +5,8 @@ from network.bo.messages.block_message import Block_message
 from db.mapper import Mapper
 from blockchain.block import Block
 
+log = logging.getLogger()
+
 
 class Block_broadcasting():
     def __init__(self, node) -> None:
@@ -24,26 +26,26 @@ class Block_broadcasting():
         local_latest_block_hash = Mapper().read_latest_block_hash()
 
         if block.validate() is False:
-            logging.error("The block is not valid")
+            log.error("The block is not valid")
             return False
         if block.saved_hash in my_block_hashes:
-            logging.error("The local blockchain contains the block already")
+            log.error("The local blockchain contains the block already")
             return False
         if block.predecessor == local_latest_block_hash:
             block.write_to_file()
             Mapper().write_latest_block_hash(block.saved_hash)
-            logging.info("block saved")
+            log.info("block saved")
         else:
-            logging.warning("the predecessor of the received block doesn't match the "
-                            "local latest block")
-            logging.info("initiate block download")
+            log.warning("the predecessor of the received block doesn't match the "
+                        "local latest block")
+            log.info("initiate block download")
             block_download = Block_download(self.node)
             block_download.get_blocks(sender_node_conn)
 
         # relay block
         for conn in self.node.all_nodes:
             if conn.id != sender_node_conn.id:
-                logging.debug(f"relay block {block.saved_hash} from Node {self.node.id} to Node "
-                              f"{conn.id}")
+                log.debug(f"relay block {block.saved_hash} from Node {self.node.id} to Node "
+                          f"{conn.id}")
                 self.node.send_to_node(conn, message)
         return True

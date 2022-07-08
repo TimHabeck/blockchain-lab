@@ -1,6 +1,6 @@
 '''
 Test functions to test different approaches/algorithms to find a nonce for a block
-Used to determine which approach has the least overall iterations
+Used to determine which approach has the least overall hash iterations
 
 run with 'python -m unittest' in the src/ directory
 individual tests can be run with e.g.:
@@ -33,9 +33,7 @@ class TestMining(TestCase):
         start = datetime.now()  # FIXME this is inaccurate, but is enough to get a rough estimation
 
         for i in range(self.NO_OF_BLOCKS):
-            tx = Transaction(str(i), 'alice', 1.0, datetime(2022, 1, 1, 0, 0, 0))
-            # tx = Transaction('bob', str(i), 1.0, datetime(2022, 1, 1, 0, 0, 0))
-            # tx = Transaction(str(i), str(i), 1.0, datetime(2022, 1, 1, 0, 0, 0))
+            tx = Transaction('bob', 'alice', float(i), datetime(2022, 1, 1, 0, 0, 0))
             tx_hash = tx.hash()
             private_key = SigningKey.generate(curve=SECP256k1, hashfunc=sha256)
             pubkey = private_key.get_verifying_key()
@@ -56,9 +54,7 @@ class TestMining(TestCase):
         start = datetime.now()
 
         for i in range(self.NO_OF_BLOCKS):
-            tx = Transaction(str(i), 'alice', 1.0, datetime(2022, 1, 1, 0, 0, 0))
-            # tx = Transaction('bob', str(i), 1.0, datetime(2022, 1, 1, 0, 0, 0))
-            # tx = Transaction(str(i), str(i), 1.0, datetime(2022, 1, 1, 0, 0, 0))
+            tx = Transaction('bob', 'alice', float(i), datetime(2022, 1, 1, 0, 0, 0))
             tx_hash = tx.hash()
             private_key = SigningKey.generate(curve=SECP256k1, hashfunc=sha256)
             pubkey = private_key.get_verifying_key()
@@ -72,21 +68,3 @@ class TestMining(TestCase):
 
         print("Average iterations for nonce-skip:\t", sum(all_iterations) / len(all_iterations))
         print(f"took {datetime.now() - start}")
-
-    def mine_with_bitshift(self):
-        ''' Find the nonce and the number of iterations for each block using bitshifting '''
-        all_iterations = []
-        # create 99 transactions and increment the amount each time
-        for i in range(self.NO_OF_BLOCKS):
-            tx = Transaction(str(i), 'alice', 1.0, datetime(2022, 1, 1, 0, 0, 0))
-            tx_hash = tx.hash()
-            private_key = SigningKey.generate(curve=SECP256k1, hashfunc=sha256)
-            pubkey = private_key.get_verifying_key()
-            sig = private_key.sign(tx_hash.encode("utf-8"))
-            tx.set_pubkey(pubkey)
-            tx.set_signature(sig)
-
-            block = Block(transactions=[tx])    # put the tx in a block and mine it
-            block.find_nonce(difficulty=self.DIFFICULTY, method='bitshift')
-            all_iterations.append(block.iterations)
-        print("Average iterations for bitshift:\t", sum(all_iterations) / len(all_iterations))

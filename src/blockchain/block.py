@@ -2,16 +2,17 @@ import hashlib
 import json
 import logging
 import os
+import time
 import numpy as np
-from ecdsa import VerifyingKey, SECP256k1
+import multiprocessing as mp
 from abc import ABC, abstractmethod
 from datetime import datetime
+from ecdsa import VerifyingKey, SECP256k1
 from sklearn.cluster import KMeans
 from .merkle_tree import MerkleTree
 from db.mapper import Mapper
-from src.blockchain.merkle_tree import MerkleTree
-import multiprocessing as mp
-import time
+
+log = logging.getLogger()
 
 
 class Serializable(ABC):
@@ -87,7 +88,7 @@ class Transaction(Serializable):
         local_block_hashes = os.listdir(cwd + "/db/blocks/")
         for block_hash in local_block_hashes:
             block_dict = Mapper().read_block(block_hash)
-            block: Block = Block().from_dict(block_dict, block_hash)
+            block = Block().from_dict(block_dict, block_hash)
             try:
                 for transaction in block.transactions:
                     if transaction.source == self.source:
@@ -95,7 +96,7 @@ class Transaction(Serializable):
                     if transaction.target == self.source:
                         balance += transaction.amount
             except AttributeError:
-                logging.error("no transaction")
+                log.error(f"no transactions for block {block_hash}")
         return balance
 
     def validate(self):
@@ -103,22 +104,22 @@ class Transaction(Serializable):
         # we just assume if the keys are present, the values are also valid
         expected_keys = set(["amount", "source", "target", "timestamp"])
         if set(self.to_dict()) != expected_keys:
-            logging.error("Transaction key fields invalid")
+            log.error("Transaction key fields invalid")
             return False
 
         balance = self.get_balance()
         if balance < self.amount:
-            logging.error(f"Not valid: {self.source} can't send {self.amount} "
-                          f"with balance of {balance}")
+            log.error(f"Not valid: {self.source} can't send {self.amount} "
+                      f"with balance of {balance}")
             return False
 
         # verify the transaction signature
         tx_hash = self.hash()
         if not self.pubkey.verify(self.sig, tx_hash.encode("utf-8")):
-            logging.error("Cannot verify transaction signature")
+            log.error("Cannot verify transaction signature")
             return False
 
-        logging.info("Transaction is valid")
+        log.info("Transaction is valid")
         return True
 
 
@@ -196,7 +197,7 @@ class Block(Serializable):
                 block_dict, sort_keys=True).encode("utf-8")
             return hashlib.sha256(serialized_block).hexdigest()
         else:
-            logging.error("No Nonce available jet. Mine it first!")
+            log.error("No Nonce available yet. Mine it first!")
 
     def add_transaction(self, t):
         self.transactions.append(t)
@@ -209,20 +210,20 @@ class Block(Serializable):
             transactions.append(json.dumps(transaction.to_dict()))
 
         if self.saved_hash != self.hash():
-            logging.error("Not valid: recalculating the hash results in a different hash")
+            log.error("Not valid: recalculating the hash results in a different hash")
             return False
 
         if not self.validate_nonce(transactions, self.nonce):
-            logging.error(f"Not valid: Nonce {self.nonce} does not fullfill the difficulty")
+            log.error(f"Not valid: Nonce {self.nonce} does not fullfill the difficulty")
             return False
 
-        logging.info("Block is valid")
+        log.info("Block is valid")
         return True
 
     def write_to_file(self):
-        hash = self.hash()
+        block_hash = self.hash()
         block = self.serialize()
-        Mapper().write_block(hash, block)
+        Mapper().write_block(block_hash, block)
 
     def stop_mining(self) -> None:
         self.is_mining = False
@@ -234,20 +235,18 @@ class Block(Serializable):
         return self.iterations
 
     def determine_start_nonce(self) -> int:
-        # convert the read data into a list of integers
         data = Mapper().read_nonce_list()
         if data:
             data = data.split('\n')         # str.split() returns a list of strings
             data.pop(-1)                    # remove the last element, since it is an empty string
             self.nonce_list = sorted(list(map(int, data)))  # convert all str to int and sort
 
-        # only cluster every 5 blocks and when we have enough initial values
+        # only cluster every 5 blocks and when we have 15 initial values
         if len(self.nonce_list) >= 15 and len(self.nonce_list) % 5 == 0:
             data = np.array(self.nonce_list)
             kmeans = KMeans(n_clusters=3).fit(data.reshape(-1, 1))
             kmeans.predict(data.reshape(-1, 1))
             # return the mean value between the first centroid and the smallest nonce in the list
-            # FIXME using the standard deviation might make more sense here
             return int((int(min(kmeans.cluster_centers_)[0]) + min(self.nonce_list)) / 2)
         # else return the last determined start nonce
         return int(Mapper().read_latest_start_nonce())
@@ -260,19 +259,19 @@ class Block(Serializable):
         if method == 'bruteforce':
             nonce = 0
             while self.is_mining:
-                # Try with this nonce
                 if self.validate_nonce(transactions, nonce, difficulty):
-                    logging.info(f"successfull at {nonce}")
+                    log.info(f"successfull at {nonce}")
                     self.nonce = nonce
+                    self.stop_mining()
                     return nonce
                 else:
-                    logging.debug(f"not successfull at {nonce}")
+                    log.debug(f"not successfull at {nonce}")
                 nonce += 1
 
         elif method == 'nonce-skip':
             nonce = self.determine_start_nonce()
-            print(nonce)
             Mapper().write_latest_start_nonce(str(nonce).encode())
+
             # remove all elements from the nonce_list that are smaller than the starting nonce
             self.nonce_list = list(filter(lambda x: x >= nonce, self.nonce_list))
             index = 0
@@ -280,70 +279,31 @@ class Block(Serializable):
             while self.is_mining:
                 # check if the nonce has already been used
                 if self.nonce_list and nonce == self.nonce_list[index]:
-                    logging.info(f"skipped {nonce}")
+                    log.info(f"skipped {nonce}")
                     nonce += 1
                     # check if we reached the end of the list
                     if not (index + 1 == len(self.nonce_list)):
                         index += 1
                     continue
                 elif self.validate_nonce(transactions, nonce, difficulty):
-                    logging.info(f"successfull at {nonce}")
+                    log.info(f"successfull at {nonce}")
                     self.nonce = nonce
                     self.iterations = iterations + 1
+                    self.stop_mining()
                     Mapper().append_to_nonce_list(nonce)
                     return nonce
                 else:
-                    logging.debug(f"not successfull at {nonce}")
+                    log.debug(f"not successfull at {nonce}")
                 nonce += 1
                 iterations += 1
                 # stop when we reach the limit of a 32-bit integer
                 if nonce > 2**32:
                     self.is_mining = False
 
-        elif method == 'bitshift':
-            # when starting at 33000, we have 17 values until 2*32 and 16 values until 1
-            start_value = 33000
-            iterations = 0
-            used_numbers = []
-            while self.is_mining:
-                nonce = start_value
-                while True:
-                    if nonce not in used_numbers:
-                        if self.validate_nonce(transactions, nonce, difficulty):
-                            logging.info(f"successfull at {nonce}")
-                            logging.debug(f"{start_value=}\t{iterations=}")
-                            self.iterations = iterations
-                            return nonce
-                        used_numbers.append(nonce)
-                        iterations += 1
-                    logging.debug(f"not successfull at {nonce}")
-                    nonce = nonce << 1
-                    if nonce > 2**32:   # make sure we stay in our bounds
-                        break
-
-                nonce = start_value     # reset the nonce
-                while True:
-                    if nonce not in used_numbers:
-                        if self.validate_nonce(transactions, nonce, difficulty):
-                            logging.info(f"successfull at {nonce}")
-                            logging.debug(f"{start_value=}\t{iterations=}")
-                            self.iterations = iterations
-                            return nonce
-                        used_numbers.append(nonce)
-                        iterations += 1
-                    logging.debug(f"not successfull at {nonce}")
-                    nonce = nonce >> 1
-                    if nonce < 1:   # check for 1, since we never reach 0
-                        break
-                start_value += 1
-
-                # at 130000 we have 16 values until 2*32 and 17 values until 1
-                if start_value > 130000:
-                    self.is_mining = False
         elif method == 'multithreading':
-            max = 40000000
+            max = 2**32  # use the max value of a 32-bit integer as the limit
             cpus = mp.cpu_count()
-            individual_load = int((max/cpus) - (max/cpus)%1)
+            individual_load = int((max/cpus) - (max/cpus) % 1)
 
             processes = []
             manager = mp.Manager()
@@ -354,45 +314,41 @@ class Block(Serializable):
             run.set()  # We should keep running.
 
             for i in range(cpus):
-                process = mp.Process(target=self.mine_multithreaded, args=(shared_dict, i, cpus, individual_load+1))
+                process = mp.Process(target=self.mine_multithreaded,
+                                     args=(shared_dict, i, cpus, individual_load+1))
                 processes.append(process)
 
-            print(processes)
-            t1 = time.time()
-            for i in processes:
+            log.debug(f"Mining with processes {processes}")
+            start_time = time.time()
+            for proc in processes:
                 if shared_dict["nonce"] is None:
-                    i.start()
+                    proc.start()
                 else:
                     break
                 time.sleep(0.1)
-            
+
             while True:
                 if not self.is_mining:
-                    print("mining will be stopped for external reasons")
-                    for i in processes:
-                        if i.is_alive():
-                            i.terminate()
+                    log.warning("mining will be stopped for external reasons")
+                    for proc in processes:
+                        if proc.is_alive():
+                            proc.terminate()
                     break
                 elif shared_dict["nonce"] is not None:
-                    print("nonce found")
-                    for i in processes:
-                        if i.is_alive():
-                            i.terminate()
+                    log.info(f"Found nonce {shared_dict['nonce']}")
+                    for proc in processes:
+                        if proc.is_alive():
+                            proc.terminate()
                     break
                 elif len(shared_dict["finished"]) == cpus:
-                    print("Nothing found")
+                    log.error("Could not determine nonce with multithreading")
                     break
                 else:
                     time.sleep(0.1)
-            t2 = time.time()
-            td = t2-t1
-            round(td, 2)
-            print(td)
-
-            print("something happended")
-            
+            log.debug(f"Took about {round(time.time() - start_time, 2)} seconds")
+            self.stop_mining()
             return shared_dict["nonce"]
-            
+
     def mine_multithreaded(self, shared_dict, start=0, steps=1, times=1000):
         transactions = list()
         for t in self.transactions:
@@ -402,14 +358,14 @@ class Block(Serializable):
         while self.is_mining:
             # Try with this nonce
             if self.validate_nonce(transactions, nonce):
-                logging.info(f"successfull at {nonce}")
+                log.info(f"successfull at {nonce}")
                 shared_dict["nonce"] = nonce
                 return nonce
             else:
-                logging.debug(f"not successfull at {nonce}")
+                log.debug(f"not successfull at {nonce}")
             nonce += steps
 
-    def validate_nonce(self, transactions, nonce, difficulty=5):
+    def validate_nonce(self, transactions, nonce, difficulty=4):
         transactions.append(str(nonce))
         mtree = MerkleTree(transactions)
         t_hash = mtree.getRootHash()

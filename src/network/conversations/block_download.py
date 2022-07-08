@@ -5,6 +5,8 @@ from ..bo.messages.blocks import Blocks
 from db.mapper import Mapper
 from blockchain.block import Block
 
+log = logging.getLogger()
+
 
 class Block_download():
     def __init__(self, node) -> None:
@@ -26,7 +28,7 @@ class Block_download():
         my_block_hashes = os.listdir(os.getcwd() + "/db/blocks/")
         if latest_block_hash_from_peer == own_latest_block_hash:
             # up to date with peer
-            logging.debug("Already synced with peer")
+            log.debug("Already synced with peer")
             blocks = []
             info = "already-synced"
             msg = Blocks(blocks, info)
@@ -34,14 +36,14 @@ class Block_download():
         elif latest_block_hash_from_peer != own_latest_block_hash:
             if latest_block_hash_from_peer not in my_block_hashes:
                 # local blockchain doesn't contain latest_block_hash_from_peer -> possible fork
-                logging.warning("the local blockchain doesn't contain the latest_block_hash "
-                                "from peer")
+                log.warning("the local blockchain doesn't contain the latest_block_hash "
+                            "from peer")
                 blocks = self.build_whole_blockchain()
                 info = "fork-detected"
                 msg = Blocks(blocks, info)
                 self.node.send_to_node(node_connection, msg.to_dict())
             elif latest_block_hash_from_peer in my_block_hashes:
-                logging.debug("send blocks to peer")
+                log.debug("send blocks to peer")
                 blocks = self.build_blockchain_from_hash(latest_block_hash_from_peer, [])
                 msg = Blocks(blocks)
                 self.node.send_to_node(node_connection, msg.to_dict())
@@ -54,13 +56,13 @@ class Block_download():
         local_latest_block_hash = Mapper().read_latest_block_hash()
         successor_of_local_latest_block_count = 0
         if msg_in.get_info() == "already-synced":
-            logging.debug("Already synced with peer")
+            log.debug("Already synced with peer")
             return False
         if msg_in.get_info() == "fork-detected":
-            logging.warning("Possible fork detected")
+            log.warning("Possible fork detected")
             # if the chain from the peer is longer than the local chain, rebuild the whole thing
             if len(msg_in.get_blocks()) > len(my_block_hashes):
-                logging.debug("Less local blocks, adopting longest chain")
+                log.debug("Less local blocks, adopting longest chain")
                 db_dir = os.getcwd() + "/db/blocks/"
                 # delete the local blockchain
                 for block_hash in os.listdir(db_dir):
@@ -75,23 +77,23 @@ class Block_download():
 
         for block in msg_in.get_blocks():
             if block.validate() is False:
-                logging.error("A block is not valid")
+                log.error("A block is not valid")
                 return False
             if block.saved_hash in my_block_hashes:
-                logging.debug("The local blockchain contains one of the blocks already")
+                log.debug("The local blockchain contains one of the blocks already")
                 return False
             if block.predecessor == local_latest_block_hash:
                 successor_of_local_latest_block_count += 1
 
         if successor_of_local_latest_block_count != 1 \
                 and msg_in.get_info() != "fork-detected":
-            logging.error("Not exactly one successor of the local latest block")
+            log.error("Not exactly one successor of the local latest block")
             return False
 
         for block in msg_in.get_blocks():
             block.write_to_file()
             Mapper().write_latest_block_hash(block.saved_hash)
-        logging.info("block(s) saved")
+        log.info("block(s) saved")
         return True
 
     # helper method

@@ -3,6 +3,7 @@ private_key.pem
 public_key.pem
 blocks/
 .idea
+.DS_Store
 src/db/latest_block_hash
 nonce_list
 start_nonce

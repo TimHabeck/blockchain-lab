@@ -217,11 +217,25 @@ class Block(Serializable):
     def get_mining_status(self) -> bool:
         return self.is_mining
 
-    def mine_multithreaded(self):
-        max = 40000000
-        
-        cpus = mp.cpu_count()
+    def mine_multithreaded(self, shared_dict, start=0, steps=1, times=1000):
+        transactions = list()
+        for t in self.transactions:
+            transactions.append(json.dumps(t.to_dict()))
+        nonce = start
 
+        while self.is_mining:
+            # Try with this nonce
+            if self.validate_nonce(transactions, nonce):
+                logging.info(f"successfull at {nonce}")
+                shared_dict["nonce"] = nonce
+                return nonce
+            else:
+                logging.debug(f"not successfull at {nonce}")
+            nonce += steps
+
+    def find_nonce(self):
+        max = 40000000
+        cpus = mp.cpu_count()
         individual_load = int((max/cpus) - (max/cpus)%1)
 
         processes = []
@@ -233,7 +247,7 @@ class Block(Serializable):
         run.set()  # We should keep running.
 
         for i in range(cpus):
-            process = mp.Process(target=self.find_nonce, args=(shared_dict, i, cpus, individual_load+1))
+            process = mp.Process(target=self.mine_multithreaded, args=(shared_dict, i, cpus, individual_load+1))
             processes.append(process)
 
         print(processes)
@@ -271,22 +285,6 @@ class Block(Serializable):
         print("something happended")
         
         return shared_dict["nonce"]
-
-    def find_nonce(self, shared_dict, start=0, steps=1, times=1000):
-        transactions = list()
-        for t in self.transactions:
-            transactions.append(json.dumps(t.to_dict()))
-        nonce = start
-
-        while self.is_mining:
-            # Try with this nonce
-            if self.validate_nonce(transactions, nonce):
-                logging.info(f"successfull at {nonce}")
-                shared_dict["nonce"] = nonce
-                return nonce
-            else:
-                logging.debug(f"not successfull at {nonce}")
-            nonce += steps
 
     def validate_nonce(self, transactions, nonce, difficulty=5):
         transactions.append(str(nonce))

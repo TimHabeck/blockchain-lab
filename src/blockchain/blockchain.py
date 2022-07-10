@@ -20,7 +20,7 @@ class Blockchain():
             logging.error("No node specified, cannot mine block")
             return
 
-        block.nonce = block.mine_multithreaded()
+        block.nonce = block.find_nonce()
 
         if not block.get_mining_status():
             # don't save the local block if another node was faster

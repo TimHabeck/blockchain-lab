@@ -30,3 +30,25 @@ enthalten.
 - Wenn eine Parent-Node offline geht, sind auch alle Child-Nodes offline (siehe Netzwerkaufbau unten)
 - Host discovery im P2P-Netz (Host, der eine Liste mit verfügbaren Nodes pflegt)
 - Implementierung eines Proof of Stake Mechanismus and Gegenstück zum Proof of Work
+
+## Netzwerkaufbau
+
+```mermaid
+graph TD
+     80-->81
+    80-->82
+    80-->83
+    81-->84
+    81-->85
+    81-->86
+    82-->87
+    82-->88
+    82-->89
+    83-->90
+    83-->91
+    83-->92
+    84-->...
+    85-->...
+    86-->...
+
+```
